@@ -83,20 +83,27 @@ const StateController = (function () {
         }
     }
 
+    function storeTab() {
+        localStorage.setItem(LS_PREFIX + 'tab', this.textContent);
+        bindTabEvents();
+    }
+
+    function bindTabEvents() {
+        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
+        tabs.forEach(tab => { // dirty hack here
+            tab.removeEventListener('click', storeTab);
+            tab.addEventListener('click', storeTab);
+        });
+        return tabs;
+    }
+
     function restoreTabs(config) {
 
         if (! config.hasSetting('tabs')) {
             return;
         }
 
-        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
-
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function () {
-                localStorage.setItem(LS_PREFIX + 'tab', this.textContent);
-            });
-        });
-
+        const tabs = bindTabEvents();
         const value = localStorage.getItem(LS_PREFIX + 'tab');
 
         if (value) {
