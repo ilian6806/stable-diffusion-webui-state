@@ -118,8 +118,8 @@ const StateController = (function () {
                         localStorage.removeItem(keys[i]);
                     }
                 }
+                alert('All state values deleted!');
             }
-            alert('All state values deleted!');
         });
 
         toolbar.appendChild(resetBtn);
