@@ -64,6 +64,7 @@ const StateController = (function () {
 
     function load(config) {
 
+        loadUI();
         restoreTabs(config);
 
         for (const [settingId, element] of Object.entries(ELEMENTS)) {
@@ -96,6 +97,37 @@ const StateController = (function () {
         });
         return tabs;
     }
+
+    function loadUI() {
+
+        let toolbar = document.createElement("div");
+        toolbar.style.minWidth = 0;
+        toolbar.className = "gr-box relative w-full border-solid border border-gray-200 gr-padded";
+
+        let resetBtn = document.createElement("button");
+        resetBtn.innerHTML = "🔁";
+        resetBtn.className = "gr-button gr-button-lg gr-button-tool";
+        resetBtn.style.border = "none";
+        resetBtn.title = "Reset State";
+        resetBtn.addEventListener('click', function () {
+            let confirmed = confirm('Reset all state values?');
+            if (confirmed) {
+                let keys = Object.keys(localStorage);
+                for (let i = 0; i < keys.length; i++) {
+                    if (keys[i].startsWith('state-')) {
+                        localStorage.removeItem(keys[i]);
+                    }
+                }
+            }
+            alert('All state values deleted!');
+        });
+
+        toolbar.appendChild(resetBtn);
+
+        let quickSettings = gradioApp().getElementById("quicksettings");
+        quickSettings.appendChild(toolbar);
+    }
+
 
     function restoreTabs(config) {
 
