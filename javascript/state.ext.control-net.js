@@ -90,6 +90,26 @@ state.extensions['control-net'] = (function () {
         });
     }
 
+    function handleRadioButtons() {
+        let fieldsets = container.querySelectorAll('fieldset');
+        fieldsets.forEach(function (fieldset) {
+            let label = fieldset.firstChild.nextElementSibling;
+            let radios = fieldset.querySelectorAll('input[type="radio"]');
+            let id = state.utils.txtToId(label.textContent);
+            let value = store.get(id);
+            if (value) {
+                radios.forEach(function (radio) {
+                    state.utils.setValue(radio, value, 'change');
+                });
+            }
+            radios.forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    store.set(id, this.value);
+                });
+            });
+        });
+    }
+
     function init() {
         container = gradioApp().getElementById('controlnet');
         store = new state.Store('ext-control-net');
@@ -98,6 +118,7 @@ state.extensions['control-net'] = (function () {
         handleCheckboxes();
         handleSelects();
         handleSliders();
+        handleRadioButtons();
     }
 
     return { init };
