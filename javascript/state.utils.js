@@ -26,5 +26,8 @@ state.utils = {
                 element.value = value;
                 this.triggerEvent(element, event);
         }
+    },
+    txtToId: function txtToId(txt) {
+        return txt.split(' ').join('-').toLowerCase();
     }
 };
