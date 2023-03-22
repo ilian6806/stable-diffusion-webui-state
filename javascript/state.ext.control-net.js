@@ -5,6 +5,7 @@ state.extensions['control-net'] = (function () {
 
     let container = null;
     let store = null;
+    let cnTabs = [];
 
     function handleToggle() {
         let value = store.get('toggled');
@@ -46,68 +47,76 @@ state.extensions['control-net'] = (function () {
     }
 
     function handleCheckboxes() {
-        let checkboxes = container.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(function (checkbox) {
-           let label = checkbox.nextElementSibling;
-           let id = state.utils.txtToId(label.textContent);
-           let value = store.get(id);
-           if (value) {
-               state.utils.setValue(checkbox, value, 'change');
-           }
-           checkbox.addEventListener('change', function () {
-               store.set(id, this.checked);
-           });
+        cnTabs.forEach(({ container, store }) => {
+            let checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function (checkbox) {
+                let label = checkbox.nextElementSibling;
+                let id = state.utils.txtToId(label.textContent);
+                let value = store.get(id);
+                if (value) {
+                    state.utils.setValue(checkbox, value, 'change');
+                }
+                checkbox.addEventListener('change', function () {
+                    store.set(id, this.checked);
+                });
+            });
         });
     }
 
     function handleSelects() {
-        let selects = container.querySelectorAll('select');
-        selects.forEach(function (select) {
-            let label = select.previousElementSibling;
-            let id = state.utils.txtToId(label.textContent);
-            let value = store.get(id);
-            if (value) {
-                state.utils.setValue(select, value, 'change');
-            }
-            select.addEventListener('change', function () {
-                store.set(id, this.value);
+        cnTabs.forEach(({ container, store }) => {
+            let selects = container.querySelectorAll('select');
+            selects.forEach(function (select) {
+                let label = select.previousElementSibling;
+                let id = state.utils.txtToId(label.textContent);
+                let value = store.get(id);
+                if (value) {
+                    state.utils.setValue(select, value, 'change');
+                }
+                select.addEventListener('change', function () {
+                    store.set(id, this.value);
+                });
+                if (id === 'preprocessor' && value && value !== 'none') {
+                    state.utils.onNextUiUpdates(handleSliders); // update new sliders if needed
+                }
             });
-            if (id === 'preprocessor' && value && value !== 'none') {
-                state.utils.onNextUiUpdates(handleSliders); // update new sliders if needed
-            }
         });
     }
 
     function handleSliders() {
-        let sliders = container.querySelectorAll('input[type="range"]');
-        sliders.forEach(function (slider) {
-            let label = slider.previousElementSibling.querySelector('label span');
-            let id = state.utils.txtToId(label.textContent);
-            let value = store.get(id);
-            if (value) {
-                state.utils.setValue(slider, value, 'change');
-            }
-            slider.addEventListener('change', function () {
-                store.set(id, this.value);
+        cnTabs.forEach(({ container, store }) => {
+            let sliders = container.querySelectorAll('input[type="range"]');
+            sliders.forEach(function (slider) {
+                let label = slider.previousElementSibling.querySelector('label span');
+                let id = state.utils.txtToId(label.textContent);
+                let value = store.get(id);
+                if (value) {
+                    state.utils.setValue(slider, value, 'change');
+                }
+                slider.addEventListener('change', function () {
+                    store.set(id, this.value);
+                });
             });
         });
     }
 
     function handleRadioButtons() {
-        let fieldsets = container.querySelectorAll('fieldset');
-        fieldsets.forEach(function (fieldset) {
-            let label = fieldset.firstChild.nextElementSibling;
-            let radios = fieldset.querySelectorAll('input[type="radio"]');
-            let id = state.utils.txtToId(label.textContent);
-            let value = store.get(id);
-            if (value) {
+        cnTabs.forEach(({ container, store }) => {
+            let fieldsets = container.querySelectorAll('fieldset');
+            fieldsets.forEach(function (fieldset) {
+                let label = fieldset.firstChild.nextElementSibling;
+                let radios = fieldset.querySelectorAll('input[type="radio"]');
+                let id = state.utils.txtToId(label.textContent);
+                let value = store.get(id);
+                if (value) {
+                    radios.forEach(function (radio) {
+                        state.utils.setValue(radio, value, 'change');
+                    });
+                }
                 radios.forEach(function (radio) {
-                    state.utils.setValue(radio, value, 'change');
-                });
-            }
-            radios.forEach(function (radio) {
-                radio.addEventListener('change', function () {
-                    store.set(id, this.value);
+                    radio.addEventListener('change', function () {
+                        store.set(id, this.value);
+                    });
                 });
             });
         });
@@ -123,8 +132,27 @@ state.extensions['control-net'] = (function () {
     }
 
     function init() {
+
         container = gradioApp().getElementById('controlnet');
         store = new state.Store('ext-control-net');
+
+        let tabs = container.querySelectorAll('.tabitem');
+
+        if (tabs.length) {
+            cnTabs = [];
+            tabs.forEach((tabContainer, i) => {
+                cnTabs.push({
+                    container: tabContainer,
+                    store: new state.Store('ext-control-net-' + i)
+                });
+            });
+        } else {
+            cnTabs = [{
+                container: container,
+                store: new state.Store('ext-control-net-0')
+            }];
+        }
+
         load();
     }
 

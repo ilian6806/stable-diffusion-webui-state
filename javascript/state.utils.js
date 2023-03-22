@@ -50,6 +50,7 @@ state.utils = {
         }
     },
     onNextUiUpdates: function (func) {
-        onUiUpdate(this.callXTimes(this.debounce(func, 50), 10));
+        // brute force this to to ensure that the method is called after next few updates
+        onUiUpdate(this.callXTimes(function () { setTimeout(func, 10); }, 50));
     }
 };
