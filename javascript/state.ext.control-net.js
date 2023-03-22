@@ -72,6 +72,9 @@ state.extensions['control-net'] = (function () {
             select.addEventListener('change', function () {
                 store.set(id, this.value);
             });
+            if (id === 'preprocessor' && value && value !== 'none') {
+                state.utils.onNextUiUpdates(handleSliders); // update new sliders if needed
+            }
         });
     }
 
@@ -110,15 +113,19 @@ state.extensions['control-net'] = (function () {
         });
     }
 
-    function init() {
-        container = gradioApp().getElementById('controlnet');
-        store = new state.Store('ext-control-net');
+    function load() {
         handleToggle();
         handleTabs();
         handleCheckboxes();
         handleSelects();
         handleSliders();
         handleRadioButtons();
+    }
+
+    function init() {
+        container = gradioApp().getElementById('controlnet');
+        store = new state.Store('ext-control-net');
+        load();
     }
 
     return { init };

@@ -29,5 +29,27 @@ state.utils = {
     },
     txtToId: function txtToId(txt) {
         return txt.split(' ').join('-').toLowerCase();
+    },
+    callXTimes: function callXTimes(func, times) {
+        let called = 0;
+        return function() {
+            if (called < times) {
+                called++;
+                return func.apply(this);
+            }
+        }
+    },
+    debounce: function debounce(func, delay) {
+        let lastCallTime = 0;
+        return function() {
+            const currentCallTime = new Date().getTime();
+            if (currentCallTime - lastCallTime > delay) {
+                lastCallTime = currentCallTime;
+                func.apply(this, arguments);
+            }
+        }
+    },
+    onNextUiUpdates: function (func) {
+        onUiUpdate(this.callXTimes(this.debounce(func, 50), 10));
     }
 };
