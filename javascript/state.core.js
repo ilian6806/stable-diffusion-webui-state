@@ -77,20 +77,6 @@ state.core = (function () {
         handleExtensions(config);
     }
 
-    function storeTab() {
-        store.set('tab', this.textContent);
-        bindTabEvents();
-    }
-
-    function bindTabEvents() {
-        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
-        tabs.forEach(tab => { // dirty hack here
-            tab.removeEventListener('click', storeTab);
-            tab.addEventListener('click', storeTab);
-        });
-        return tabs;
-    }
-
     function loadUI() {
 
         let toolbar = document.createElement("div");
@@ -123,7 +109,7 @@ state.core = (function () {
             return;
         }
 
-        const tabs = bindTabEvents();
+        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
         const value = store.get('tab');
 
         if (value) {
@@ -134,6 +120,10 @@ state.core = (function () {
                 }
             }
         }
+
+        onUiTabChange(function () {
+            store.set('tab', get_uiCurrentTab().textContent);
+        });
     }
 
     function handleSavedInput(id) {
