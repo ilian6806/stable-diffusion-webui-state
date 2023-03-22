@@ -6,6 +6,18 @@ state.extensions['control-net'] = (function () {
     let container = null;
     let store = null;
 
+    function handleToggle() {
+        let value = store.get('toggled');
+        let toggleBtn = container.querySelector('div.cursor-pointer');
+        if (value && value === 'true') {
+            state.utils.triggerEvent(toggleBtn, 'click');
+        }
+        toggleBtn.addEventListener('click', function () {
+            let span = this.querySelector('.transition');
+            store.set('toggled', !span.classList.contains('rotate-90'));
+        });
+    }
+
     function bindTabEvents() {
         const tabs = container.querySelectorAll('.tabs > div > button');
         tabs.forEach(tab => { // dirty hack here
@@ -36,6 +48,7 @@ state.extensions['control-net'] = (function () {
     function init() {
         container = gradioApp().getElementById('controlnet');
         store = new state.Store('ext-control-net');
+        handleToggle();
         handleTabs();
     }
 
