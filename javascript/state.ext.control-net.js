@@ -39,5 +39,5 @@ state.extensions['control-net'] = (function () {
         handleTabs();
     }
 
-    return { init }
+    return { init };
 }());

@@ -182,23 +182,7 @@ state.core = (function () {
         }
 
         forEach(function (event) {
-            switch (this.type) {
-                case 'checkbox':
-                    this.checked = value === 'true';
-                    state.utils.triggerEvent(this, event);
-                    break;
-                case 'radio':
-                    if (this.value === value) {
-                        this.checked = true;
-                        state.utils.triggerEvent(this, event);
-                    } else {
-                        this.checked = false;
-                    }
-                    break;
-                default:
-                    this.value = value;
-                    state.utils.triggerEvent(this, event);
-            }
+            state.utils.setValue(this, value, event);
         });
     }
 
