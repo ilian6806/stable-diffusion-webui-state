@@ -2,6 +2,7 @@ from fastapi import FastAPI, Body, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 
 import gradio as gr
+import modules.shared as shared
 import modules.script_callbacks as script_callbacks
 
 
@@ -20,7 +21,7 @@ class StateApi():
         self.add_api_route('/config.json', self.get_config, methods=['GET'])
 
     def get_config(self):
-        return FileResponse('config.json')
+        return FileResponse(shared.cmd_opts.ui_settings_file)
 
 
 try:
