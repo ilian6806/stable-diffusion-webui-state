@@ -1,4 +1,5 @@
 window.state = window.state || {};
+state = window.state;
 
 state.utils = {
     triggerEvent: function triggerEvent(element, event) {
