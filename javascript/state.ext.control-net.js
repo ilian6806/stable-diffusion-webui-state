@@ -1,5 +1,6 @@
 window.state = window.state || {};
 window.state.extensions = window.state.extensions || {};
+state = window.state;
 
 state.extensions['control-net'] = (function () {
 

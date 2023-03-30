@@ -1,4 +1,5 @@
 window.state = window.state || {};
+state = window.state;
 
 state.Store = function Store (prefix) {
     this.prefix = state.constants.LS_PREFIX + (prefix ? prefix + '-' : '');
