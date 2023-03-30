@@ -56,5 +56,11 @@ def on_ui_settings():
         ]
     }, section=section))
 
+    shared.opts.add_option("state_extensions", shared.OptionInfo([], "Saved elements from extensions", gr.CheckboxGroup, lambda: {
+        "choices": [
+            "control-net"
+        ]
+    }, section=section))
+
 
 scripts.script_callbacks.on_ui_settings(on_ui_settings)
