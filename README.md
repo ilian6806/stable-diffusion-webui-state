@@ -11,6 +11,8 @@ This extension is for AUTOMATIC1111's [Stable Diffusion web UI](https://github.c
 
 * Preserve web UI parameters (inputs, sliders, checkboxes etc.) after page reload.
 * It can be extended to preserve basically everything in the UI.
+* Supported extensions:
+    - Control Net
 
 ### Install
 
