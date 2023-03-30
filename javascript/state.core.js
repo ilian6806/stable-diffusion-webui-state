@@ -1,12 +1,7 @@
+window.state = window.state || {};
 
-document.addEventListener('DOMContentLoaded', function() {
-    onUiLoaded(StateController.init);
-});
+state.core = (function () {
 
-
-const StateController = (function () {
-
-    const LS_PREFIX = 'state-';
     const TABS = ['txt2img', 'img2img'];
     const ELEMENTS = {
         'prompt': 'prompt',
@@ -35,13 +30,7 @@ const StateController = (function () {
         'resize_mode': 'resize_mode',
     };
 
-    function triggerEvent(element, event) {
-        if (! element) {
-            return;
-        }
-        element.dispatchEvent(new Event(event.trim()));
-        return element;
-    }
+    let store = null;
 
     function hasSetting(id, tab) {
         const suffix = tab ? `_${tab}` : '';
@@ -64,6 +53,8 @@ const StateController = (function () {
 
     function load(config) {
 
+        store = new state.Store();
+
         loadUI();
         restoreTabs(config);
 
@@ -82,20 +73,8 @@ const StateController = (function () {
                 }
             });
         }
-    }
 
-    function storeTab() {
-        localStorage.setItem(LS_PREFIX + 'tab', this.textContent);
-        bindTabEvents();
-    }
-
-    function bindTabEvents() {
-        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
-        tabs.forEach(tab => { // dirty hack here
-            tab.removeEventListener('click', storeTab);
-            tab.addEventListener('click', storeTab);
-        });
-        return tabs;
+        handleExtensions(config);
     }
 
     function loadUI() {
@@ -112,12 +91,7 @@ const StateController = (function () {
         resetBtn.addEventListener('click', function () {
             let confirmed = confirm('Reset all state values?');
             if (confirmed) {
-                let keys = Object.keys(localStorage);
-                for (let i = 0; i < keys.length; i++) {
-                    if (keys[i].startsWith('state-')) {
-                        localStorage.removeItem(keys[i]);
-                    }
-                }
+                store.clearAll();
                 alert('All state values deleted!');
             }
         });
@@ -135,17 +109,21 @@ const StateController = (function () {
             return;
         }
 
-        const tabs = bindTabEvents();
-        const value = localStorage.getItem(LS_PREFIX + 'tab');
+        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
+        const value = store.get('tab');
 
         if (value) {
             for (var i = 0; i < tabs.length; i++) {
                 if (tabs[i].textContent === value) {
-                    triggerEvent(tabs[i], 'click');
+                    state.utils.triggerEvent(tabs[i], 'click');
                     break;
                 }
             }
         }
+
+        onUiTabChange(function () {
+            store.set('tab', get_uiCurrentTab().textContent);
+        });
     }
 
     function handleSavedInput(id) {
@@ -171,7 +149,7 @@ const StateController = (function () {
                 if (this.type && this.type === 'checkbox') {
                     value = this.checked;
                 }
-                localStorage.setItem(LS_PREFIX + id, value);
+                store.set(id, value);
             });
         });
 
@@ -181,37 +159,31 @@ const StateController = (function () {
                 const btn = gradioApp().querySelector(`#${tab}_${id}`);
                 btn.addEventListener('click', () => {
                     setTimeout(() => {
-                        triggerEvent(seedInput, 'change');
+                        state.utils.triggerEvent(seedInput, 'change');
                     }, 100);
                 });
             });
         });
 
-        let value = localStorage.getItem(LS_PREFIX + id);
+        let value = store.get(id);
 
         if (! value) {
             return;
         }
 
         forEach(function (event) {
-            switch (this.type) {
-                case 'checkbox':
-                    this.checked = value === 'true';
-                    triggerEvent(this, event);
-                    break;
-                case 'radio':
-                    if (this.value === value) {
-                        this.checked = true;
-                        triggerEvent(this, event);
-                    } else {
-                        this.checked = false;
-                    }
-                    break;
-                default:
-                    this.value = value;
-                    triggerEvent(this, event);
-            }
+            state.utils.setValue(this, value, event);
         });
+    }
+
+    function handleExtensions(config) {
+        if (config['state_extensions']) {
+            config['state_extensions'].forEach(function (ext) {
+                if (ext in state.extensions) {
+                    state.extensions[ext].init();
+                }
+            });
+        }
     }
 
     return { init };
