@@ -31,6 +31,10 @@ state.core = (function () {
         'resize_mode': 'resize_mode',
     };
 
+    const MULTI_SELECTS = {
+        'styles': 'styles'
+    };
+
     let store = null;
 
     function hasSetting(id, tab) {
@@ -71,6 +75,14 @@ state.core = (function () {
             TABS.forEach(tab => {
                 if (config.hasSetting(settingId, tab)) {
                     handleSavedInput(`${element}`);
+                }
+            });
+        }
+
+        for (const [settingId, element] of Object.entries(MULTI_SELECTS)) {
+            TABS.forEach(tab => {
+                if (config.hasSetting(settingId, tab)) {
+                    handleSavedMultiSelects(`${tab}_${element}`);
                 }
             });
         }
@@ -174,6 +186,52 @@ state.core = (function () {
 
         forEach(function (event) {
             state.utils.setValue(this, value, event);
+        });
+    }
+
+    function handleSavedMultiSelects(id) {
+
+        const select = gradioApp().querySelector(`#${id} .items-center.relative`);
+
+        try {
+            let value = store.get(id);
+
+            if (value) {
+
+                value = value.split(',');
+
+                if (value.length) {
+
+                    let input = select.querySelector('input');
+
+                    let selectOption = function () {
+                        if (! value.length) {
+                            state.utils.triggerMouseEvent(input, 'blur');
+                            return;
+                        }
+                        let option = value.pop();
+                        state.utils.triggerMouseEvent(input);
+                        setTimeout(() => {
+                            let items = Array.from(select.parentNode.querySelectorAll('ul li'));
+                            items.forEach(li => {
+                                if (li.lastChild.wholeText.trim() === option) {
+                                    state.utils.triggerMouseEvent(li, 'mousedown');
+                                    return false;
+                                }
+                            });
+                            setTimeout(selectOption, 100);
+                        }, 100);
+                    }
+                    selectOption();
+                }
+            }
+        } catch (error) {
+            console.error('[state]: Error:', error);
+        }
+
+        state.utils.onContentChange(select, function (el) {
+            const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
+            store.set(id, selected);
         });
     }
 
