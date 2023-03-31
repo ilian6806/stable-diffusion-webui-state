@@ -9,6 +9,18 @@ state.utils = {
         element.dispatchEvent(new Event(event.trim()));
         return element;
     },
+    triggerMouseEvent: function triggerMouseEvent(element, event) {
+        if (! element) {
+            return;
+        }
+        event = event || 'click';
+        element.dispatchEvent(new MouseEvent(event, {
+            view: window,
+            bubbles: true,
+            cancelable: true,
+        }));
+        return element;
+    },
     setValue: function setValue(element, value, event) {
         switch (element.type) {
             case 'checkbox':
@@ -27,6 +39,20 @@ state.utils = {
                 element.value = value;
                 this.triggerEvent(element, event);
         }
+    },
+    onContentChange: function onContentChange(targetNode, func) {
+        const observer = new MutationObserver((mutationsList, observer) => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    func(targetNode);
+                }
+            }
+        });
+        observer.observe(targetNode, {
+            childList: true,
+            characterData: true,
+            subtree: true
+        });
     },
     txtToId: function txtToId(txt) {
         return txt.split(' ').join('-').toLowerCase();
