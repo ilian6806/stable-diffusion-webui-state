@@ -81,3 +81,33 @@ state.utils = {
         onUiUpdate(this.callXTimes(function () { setTimeout(func, 10); }, 50));
     }
 };
+
+state.utils.html = {
+    setStyle: function setStyle(elements, style) {
+        if (elements instanceof NodeList) {
+            elements = Array.from(elements);
+        } else if (elements instanceof Node){
+            elements = [elements];
+        } else {
+            return;
+        }
+        elements.forEach(element => {
+            for (let key in style) {
+                if (style.hasOwnProperty(key)) {
+                    element.style[key] = style[key];
+                }
+            }
+        });
+    },
+    createButton: function createButton(text, onclick) {
+        const btn = document.createElement('button');
+        btn.innerHTML = text;
+        btn.onclick = onclick || function () {};
+        btn.className = 'gr-button gr-button-lg gr-button-primary';
+        this.setStyle(btn, {
+            'margin-left': '5px',
+            'margin-right': '5px'
+        });
+        return btn;
+    }
+};

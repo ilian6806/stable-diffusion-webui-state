@@ -88,6 +88,7 @@ state.core = (function () {
         }
 
         handleExtensions(config);
+        handleSettingsPage();
     }
 
     function loadUI() {
@@ -243,6 +244,53 @@ state.core = (function () {
                 }
             });
         }
+    }
+
+    function handleSettingsPage() {
+
+        const page = gradioApp().querySelector('#settings_state');
+        state.utils.html.setStyle(page.querySelectorAll('fieldset'), {
+            'marginTop': '20px',
+            'marginBottom': '10px'
+        });
+
+        let buttonsContainer = gradioApp().querySelector('#settings_state_buttons');
+        if (buttonsContainer) {
+            buttonsContainer.parentNode.removeChild(buttonsContainer);
+        }
+        buttonsContainer = document.createElement('div');
+        buttonsContainer.id = 'settings_state_buttons';
+
+        let setCheckboxes = function (value, checkFunc) {
+            checkFunc = checkFunc || function () { return true; };
+            Array.from(page.querySelectorAll('input[type="checkbox"]')).forEach(function (el) {
+                if (checkFunc(el)) {
+                    if (el.checked !== value) {
+                        el.checked = value;
+                        state.utils.triggerEvent(el, 'change');
+                    }
+                } else  if (el.checked === value) {
+                    el.checked = !value;
+                    state.utils.triggerEvent(el, 'change');
+                }
+            });
+        };
+        buttonsContainer.appendChild(state.utils.html.createButton('Select All', function () {
+            setCheckboxes(true);
+        }));
+        buttonsContainer.appendChild(state.utils.html.createButton('Select All Except Seeds', function () {
+            setCheckboxes(true, function (el) {
+                return el.nextElementSibling.textContent.indexOf('seed') === -1;
+            });
+        }));
+        buttonsContainer.appendChild(state.utils.html.createButton('Unselect All', function () {
+            setCheckboxes(false);
+        }));
+        state.utils.html.setStyle(buttonsContainer, {
+            'marginTop': '20px',
+            'marginBottom': '10px'
+        });
+        page.appendChild(buttonsContainer);
     }
 
     return { init };
