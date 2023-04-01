@@ -7,12 +7,10 @@ state.core = (function () {
     const ELEMENTS = {
         'prompt': 'prompt',
         'negative_prompt': 'neg_prompt',
-        'sampling': 'sampling',
         'sampling_steps': 'steps',
         'restore_faces': 'restore_faces',
         'tiling': 'tiling',
         'hires_fix': 'enable_hr',
-        'hires_upscaler': 'hr_upscaler',
         'hires_steps': 'hires_steps',
         'hires_scale': 'hr_scale',
         'hires_resize_x': 'hr_resize_x',
@@ -29,6 +27,11 @@ state.core = (function () {
 
     const ELEMENTS_WITHOUT_PREFIX = {
         'resize_mode': 'resize_mode',
+    };
+
+    const SELECTS = {
+        'sampling': 'sampling',
+        'hires_upscaler': 'hr_upscaler',
     };
 
     const MULTI_SELECTS = {
@@ -75,6 +78,14 @@ state.core = (function () {
             TABS.forEach(tab => {
                 if (config.hasSetting(settingId, tab)) {
                     handleSavedInput(`${element}`);
+                }
+            });
+        }
+
+        for (const [settingId, element] of Object.entries(SELECTS)) {
+            TABS.forEach(tab => {
+                if (config.hasSetting(settingId, tab)) {
+                    handleSavedSelects(`${tab}_${element}`);
                 }
             });
         }
@@ -134,15 +145,28 @@ state.core = (function () {
                 }
             }
         }
+        // Use this when onUiTabChange is fixed
+        // onUiTabChange(function () {
+        //     store.set('tab', gradioApp().querySelector('#tabs .tab-nav button.selected').textContent);
+        // });
+        bindTabClickEvents();
+    }
 
-        onUiTabChange(function () {
-            store.set('tab', get_uiCurrentTab().textContent);
+    function bindTabClickEvents() {
+        Array.from(gradioApp().querySelectorAll('#tabs .tab-nav button')).forEach(tab => {
+            tab.removeEventListener('click', storeTab);
+            tab.addEventListener('click', storeTab);
         });
+    }
+
+    function storeTab() {
+        store.set('tab', gradioApp().querySelector('#tabs .tab-nav button.selected').textContent);
+        bindTabClickEvents(); // dirty hack here...
     }
 
     function handleSavedInput(id) {
 
-        const elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} select, #${id} input`);
+        const elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} input`);
         const events = ['change', 'input'];
 
         if (! elements || ! elements.length) {
@@ -190,50 +214,14 @@ state.core = (function () {
         });
     }
 
+    function handleSavedSelects(id) {
+        const select = gradioApp().getElementById(`${id}`);
+        state.utils.handleSelect(select, id, store);
+    }
+
     function handleSavedMultiSelects(id) {
-
-        const select = gradioApp().querySelector(`#${id} .items-center.relative`);
-
-        try {
-            let value = store.get(id);
-
-            if (value) {
-
-                value = value.split(',');
-
-                if (value.length) {
-
-                    let input = select.querySelector('input');
-
-                    let selectOption = function () {
-                        if (! value.length) {
-                            state.utils.triggerMouseEvent(input, 'blur');
-                            return;
-                        }
-                        let option = value.pop();
-                        state.utils.triggerMouseEvent(input);
-                        setTimeout(() => {
-                            let items = Array.from(select.parentNode.querySelectorAll('ul li'));
-                            items.forEach(li => {
-                                if (li.lastChild.wholeText.trim() === option) {
-                                    state.utils.triggerMouseEvent(li, 'mousedown');
-                                    return false;
-                                }
-                            });
-                            setTimeout(selectOption, 100);
-                        }, 100);
-                    }
-                    selectOption();
-                }
-            }
-        } catch (error) {
-            console.error('[state]: Error:', error);
-        }
-
-        state.utils.onContentChange(select, function (el) {
-            const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
-            store.set(id, selected);
-        });
+        const select = gradioApp().getElementById(`${id}`);
+        state.utils.handleMultipleSelect(select, id, store);
     }
 
     function handleExtensions(config) {

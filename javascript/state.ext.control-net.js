@@ -10,13 +10,16 @@ state.extensions['control-net'] = (function () {
 
     function handleToggle() {
         let value = store.get('toggled');
-        let toggleBtn = container.querySelector('div.cursor-pointer');
+        let toggleBtn = container.querySelector('div.cursor-pointer, .label-wrap');
+
         if (value && value === 'true') {
             state.utils.triggerEvent(toggleBtn, 'click');
+            load();
         }
         toggleBtn.addEventListener('click', function () {
-            let span = this.querySelector('.transition');
-            store.set('toggled', !span.classList.contains('rotate-90'));
+            let span = this.querySelector('.transition, .icon');
+            store.set('toggled', span.style.transform !== 'rotate(90deg)');
+            load();
         });
     }
 
@@ -66,18 +69,11 @@ state.extensions['control-net'] = (function () {
 
     function handleSelects() {
         cnTabs.forEach(({ container, store }) => {
-            let selects = container.querySelectorAll('select');
-            selects.forEach(function (select) {
-                let label = select.previousElementSibling;
-                let id = state.utils.txtToId(label.textContent);
+            container.querySelectorAll('.gradio-dropdown').forEach(select => {
+                let id = state.utils.txtToId(select.querySelector('label').firstChild.textContent);
                 let value = store.get(id);
-                if (value) {
-                    state.utils.setValue(select, value, 'change');
-                }
-                select.addEventListener('change', function () {
-                    store.set(id, this.value);
-                });
-                if (id === 'preprocessor' && value && value !== 'none') {
+                state.utils.handleSelect(select, id, store);
+                if (id === 'preprocessor' && value && value.toLowerCase() !== 'none') {
                     state.utils.onNextUiUpdates(handleSliders); // update new sliders if needed
                 }
             });
@@ -124,18 +120,23 @@ state.extensions['control-net'] = (function () {
     }
 
     function load() {
-        handleToggle();
-        handleTabs();
-        handleCheckboxes();
-        handleSelects();
-        handleSliders();
-        handleRadioButtons();
+        setTimeout(function () {
+            handleTabs();
+            handleCheckboxes();
+            handleSelects();
+            handleSliders();
+            handleRadioButtons();
+        }, 500);
     }
 
     function init() {
 
         container = gradioApp().getElementById('controlnet');
         store = new state.Store('ext-control-net');
+
+        if (! container) {
+            return;
+        }
 
         let tabs = container.querySelectorAll('.tabitem');
 
@@ -154,6 +155,7 @@ state.extensions['control-net'] = (function () {
             }];
         }
 
+        handleToggle();
         load();
     }
 
