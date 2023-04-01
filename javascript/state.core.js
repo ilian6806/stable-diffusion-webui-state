@@ -7,12 +7,10 @@ state.core = (function () {
     const ELEMENTS = {
         'prompt': 'prompt',
         'negative_prompt': 'neg_prompt',
-        'sampling': 'sampling',
         'sampling_steps': 'steps',
         'restore_faces': 'restore_faces',
         'tiling': 'tiling',
         'hires_fix': 'enable_hr',
-        'hires_upscaler': 'hr_upscaler',
         'hires_steps': 'hires_steps',
         'hires_scale': 'hr_scale',
         'hires_resize_x': 'hr_resize_x',
@@ -29,6 +27,11 @@ state.core = (function () {
 
     const ELEMENTS_WITHOUT_PREFIX = {
         'resize_mode': 'resize_mode',
+    };
+
+    const SELECTS = {
+        'sampling': 'sampling',
+        'hires_upscaler': 'hr_upscaler',
     };
 
     const MULTI_SELECTS = {
@@ -75,6 +78,14 @@ state.core = (function () {
             TABS.forEach(tab => {
                 if (config.hasSetting(settingId, tab)) {
                     handleSavedInput(`${element}`);
+                }
+            });
+        }
+
+        for (const [settingId, element] of Object.entries(SELECTS)) {
+            TABS.forEach(tab => {
+                if (config.hasSetting(settingId, tab)) {
+                    handleSavedSelects(`${tab}_${element}`);
                 }
             });
         }
@@ -155,7 +166,7 @@ state.core = (function () {
 
     function handleSavedInput(id) {
 
-        const elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} select, #${id} input`);
+        const elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} input`);
         const events = ['change', 'input'];
 
         if (! elements || ! elements.length) {
@@ -201,6 +212,41 @@ state.core = (function () {
         forEach(function (event) {
             state.utils.setValue(this, value, event);
         });
+    }
+
+    function handleSavedSelects(id) {
+
+        const select = gradioApp().getElementById(`${id}`);
+
+        try {
+            let value = store.get(id);
+
+            if (value) {
+
+                let input = select.querySelector('input');
+                state.utils.triggerMouseEvent(input, 'focus');
+
+                setTimeout(() => {
+                    let items = Array.from(select.querySelectorAll('ul li'));
+                    items.forEach(li => {
+                        console.log(li.lastChild.wholeText.trim())
+                        if (li.lastChild.wholeText.trim() === value) {
+                            state.utils.triggerMouseEvent(li, 'mousedown');
+                            return false;
+                        }
+                    });
+                    state.utils.triggerMouseEvent(input, 'blur');
+                }, 100);
+            }
+            state.utils.onContentChange(select, function (el) {
+                const selected = el.querySelector('span.single-select');
+                if (selected) {
+                    store.set(id, selected.textContent);
+                }
+            });
+        } catch (error) {
+            console.error('[state]: Error:', error);
+        }
     }
 
     function handleSavedMultiSelects(id) {
