@@ -215,86 +215,13 @@ state.core = (function () {
     }
 
     function handleSavedSelects(id) {
-
         const select = gradioApp().getElementById(`${id}`);
-
-        try {
-            let value = store.get(id);
-
-            if (value) {
-
-                let input = select.querySelector('input');
-                state.utils.triggerMouseEvent(input, 'focus');
-
-                setTimeout(() => {
-                    let items = Array.from(select.querySelectorAll('ul li'));
-                    items.forEach(li => {
-                        console.log(li.lastChild.wholeText.trim())
-                        if (li.lastChild.wholeText.trim() === value) {
-                            state.utils.triggerMouseEvent(li, 'mousedown');
-                            return false;
-                        }
-                    });
-                    state.utils.triggerMouseEvent(input, 'blur');
-                }, 100);
-            }
-            state.utils.onContentChange(select, function (el) {
-                const selected = el.querySelector('span.single-select');
-                if (selected) {
-                    store.set(id, selected.textContent);
-                }
-            });
-        } catch (error) {
-            console.error('[state]: Error:', error);
-        }
+        state.utils.handleSelect(select, id, store);
     }
 
     function handleSavedMultiSelects(id) {
-
         const select = gradioApp().getElementById(`${id}`);
-
-        try {
-            let value = store.get(id);
-
-            if (value) {
-
-                value = value.split(',');
-
-                if (value.length) {
-
-                    let input = select.querySelector('input');
-
-                    let selectOption = function () {
-
-                        if (! value.length) {
-                            state.utils.triggerMouseEvent(input, 'blur');
-                            return;
-                        }
-
-                        let option = value.pop();
-                        state.utils.triggerMouseEvent(input, 'focus');
-
-                        setTimeout(() => {
-                            let items = Array.from(select.querySelectorAll('ul li'));
-                            items.forEach(li => {
-                                if (li.lastChild.wholeText.trim() === option) {
-                                    state.utils.triggerMouseEvent(li, 'mousedown');
-                                    return false;
-                                }
-                            });
-                            setTimeout(selectOption, 100);
-                        }, 100);
-                    }
-                    selectOption();
-                }
-            }
-            state.utils.onContentChange(select, function (el) {
-                const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
-                store.set(id, selected);
-            });
-        } catch (error) {
-            console.error('[state]: Error:', error);
-        }
+        state.utils.handleMultipleSelect(select, id, store);
     }
 
     function handleExtensions(config) {

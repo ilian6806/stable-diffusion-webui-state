@@ -54,6 +54,83 @@ state.utils = {
             subtree: true
         });
     },
+    handleSelect: function handleSelect(select, id, store) {
+        try {
+            let value = store.get(id);
+
+            if (value) {
+
+                let input = select.querySelector('input');
+                state.utils.triggerMouseEvent(input, 'focus');
+
+                setTimeout(() => {
+                    let items = Array.from(select.querySelectorAll('ul li'));
+                    items.forEach(li => {
+                        if (li.lastChild.wholeText.trim() === value) {
+                            state.utils.triggerMouseEvent(li, 'mousedown');
+                            return false;
+                        }
+                    });
+                    state.utils.triggerMouseEvent(input, 'blur');
+                }, 100);
+            }
+
+            setTimeout(() => {
+                state.utils.onContentChange(select, function (el) {
+                    const selected = el.querySelector('span.single-select');
+                    if (selected) {
+                        store.set(id, selected.textContent);
+                    }
+                });
+            }, 150);
+        } catch (error) {
+            console.error('[state]: Error:', error);
+        }
+    },
+    handleMultipleSelect: function handleMultipleSelect(select, id, store) {
+        try {
+            let value = store.get(id);
+
+            if (value) {
+
+                value = value.split(',').reverse();
+
+                if (value.length) {
+
+                    let input = select.querySelector('input');
+
+                    let selectOption = function () {
+
+                        if (! value.length) {
+                            state.utils.triggerMouseEvent(input, 'blur');
+                            return;
+                        }
+
+                        let option = value.pop();
+                        state.utils.triggerMouseEvent(input, 'focus');
+
+                        setTimeout(() => {
+                            let items = Array.from(select.querySelectorAll('ul li'));
+                            items.forEach(li => {
+                                if (li.lastChild.wholeText.trim() === option) {
+                                    state.utils.triggerMouseEvent(li, 'mousedown');
+                                    return false;
+                                }
+                            });
+                            setTimeout(selectOption, 100);
+                        }, 100);
+                    }
+                    selectOption();
+                }
+            }
+            state.utils.onContentChange(select, function (el) {
+                const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
+                store.set(id, selected);
+            });
+        } catch (error) {
+            console.error('[state]: Error:', error);
+        }
+    },
     txtToId: function txtToId(txt) {
         return txt.split(' ').join('-').toLowerCase();
     },
@@ -78,7 +155,7 @@ state.utils = {
     },
     onNextUiUpdates: function (func) {
         // brute force this to to ensure that the method is called after next few updates
-        onUiUpdate(this.callXTimes(function () { setTimeout(func, 10); }, 50));
+        onUiUpdate(this.callXTimes(function () { setTimeout(func, 5); }, 150));
     }
 };
 

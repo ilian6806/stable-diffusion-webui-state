@@ -69,18 +69,11 @@ state.extensions['control-net'] = (function () {
 
     function handleSelects() {
         cnTabs.forEach(({ container, store }) => {
-            let selects = container.querySelectorAll('select');
-            selects.forEach(function (select) {
-                let label = select.previousElementSibling;
-                let id = state.utils.txtToId(label.textContent);
+            container.querySelectorAll('.gradio-dropdown').forEach(select => {
+                let id = state.utils.txtToId(select.querySelector('label').firstChild.textContent);
                 let value = store.get(id);
-                if (value) {
-                    state.utils.setValue(select, value, 'change');
-                }
-                select.addEventListener('change', function () {
-                    store.set(id, this.value);
-                });
-                if (id === 'preprocessor' && value && value !== 'none') {
+                state.utils.handleSelect(select, id, store);
+                if (id === 'preprocessor' && value && value.toLowerCase() !== 'none') {
                     state.utils.onNextUiUpdates(handleSliders); // update new sliders if needed
                 }
             });
