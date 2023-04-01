@@ -104,10 +104,6 @@ state.utils.html = {
         btn.innerHTML = text;
         btn.onclick = onclick || function () {};
         btn.className = 'gr-button gr-button-lg gr-button-primary';
-        this.setStyle(btn, {
-            'margin-left': '5px',
-            'margin-right': '5px'
-        });
         return btn;
     }
 };

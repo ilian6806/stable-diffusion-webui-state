@@ -134,10 +134,23 @@ state.core = (function () {
                 }
             }
         }
+        // Use this when onUiTabChange is fixed
+        // onUiTabChange(function () {
+        //     store.set('tab', gradioApp().querySelector('#tabs .tab-nav button.selected').textContent);
+        // });
+        bindTabClickEvents();
+    }
 
-        onUiTabChange(function () {
-            store.set('tab', get_uiCurrentTab().textContent);
+    function bindTabClickEvents() {
+        Array.from(gradioApp().querySelectorAll('#tabs .tab-nav button')).forEach(tab => {
+            tab.removeEventListener('click', storeTab);
+            tab.addEventListener('click', storeTab);
         });
+    }
+
+    function storeTab() {
+        store.set('tab', gradioApp().querySelector('#tabs .tab-nav button.selected').textContent);
+        bindTabClickEvents(); // dirty hack here...
     }
 
     function handleSavedInput(id) {
@@ -192,7 +205,7 @@ state.core = (function () {
 
     function handleSavedMultiSelects(id) {
 
-        const select = gradioApp().querySelector(`#${id} .items-center.relative`);
+        const select = gradioApp().getElementById(`${id}`);
 
         try {
             let value = store.get(id);
@@ -206,14 +219,17 @@ state.core = (function () {
                     let input = select.querySelector('input');
 
                     let selectOption = function () {
+
                         if (! value.length) {
                             state.utils.triggerMouseEvent(input, 'blur');
                             return;
                         }
+
                         let option = value.pop();
-                        state.utils.triggerMouseEvent(input);
+                        state.utils.triggerMouseEvent(input, 'focus');
+
                         setTimeout(() => {
-                            let items = Array.from(select.parentNode.querySelectorAll('ul li'));
+                            let items = Array.from(select.querySelectorAll('ul li'));
                             items.forEach(li => {
                                 if (li.lastChild.wholeText.trim() === option) {
                                     state.utils.triggerMouseEvent(li, 'mousedown');
@@ -226,14 +242,13 @@ state.core = (function () {
                     selectOption();
                 }
             }
+            state.utils.onContentChange(select, function (el) {
+                const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
+                store.set(id, selected);
+            });
         } catch (error) {
             console.error('[state]: Error:', error);
         }
-
-        state.utils.onContentChange(select, function (el) {
-            const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
-            store.set(id, selected);
-        });
     }
 
     function handleExtensions(config) {
