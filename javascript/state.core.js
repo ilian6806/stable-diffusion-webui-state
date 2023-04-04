@@ -103,16 +103,8 @@ state.core = (function () {
     }
 
     function loadUI() {
-
-        let toolbar = document.createElement("div");
-        toolbar.style.minWidth = 0;
-        toolbar.className = "gr-box relative w-full border-solid border border-gray-200 gr-padded";
-
         let resetBtn = document.createElement("button");
-        resetBtn.innerHTML = "🔁";
-        resetBtn.className = "gr-button gr-button-lg gr-button-tool";
-        resetBtn.style.border = "none";
-        resetBtn.title = "Reset State";
+        resetBtn.innerHTML = "*️⃣";
         resetBtn.addEventListener('click', function () {
             let confirmed = confirm('Reset all state values?');
             if (confirmed) {
@@ -120,11 +112,9 @@ state.core = (function () {
                 alert('All state values deleted!');
             }
         });
-
-        toolbar.appendChild(resetBtn);
-
         let quickSettings = gradioApp().getElementById("quicksettings");
-        quickSettings.appendChild(toolbar);
+        resetBtn.className = quickSettings.querySelector('button').className;
+        quickSettings.appendChild(resetBtn);
     }
 
 
