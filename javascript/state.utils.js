@@ -143,6 +143,17 @@ state.utils = {
             }
         }
     },
+    saveFile: function saveJSON(fileName ,data) {
+        const json = JSON.stringify(data, null, 4);
+        const blob = new Blob([json], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName + '.json';
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+    },
     debounce: function debounce(func, delay) {
         let lastCallTime = 0;
         return function() {
@@ -175,6 +186,20 @@ state.utils.html = {
                 }
             }
         });
+    },
+    create: function create(type, props, style) {
+        const element = document.createElement(type);
+        if (props) {
+            for (let key in props) {
+                if (props.hasOwnProperty(key)) {
+                    element[key] = props[key];
+                }
+            }
+        }
+        if (style) {
+            this.setStyle(element, style);
+        }
+        return element;
     },
     createButton: function createButton(text, onclick) {
         const btn = document.createElement('button');
