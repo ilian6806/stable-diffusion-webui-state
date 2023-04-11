@@ -105,13 +105,7 @@ state.core = (function () {
     function loadUI() {
         let resetBtn = document.createElement("button");
         resetBtn.innerHTML = "*️⃣";
-        resetBtn.addEventListener('click', function () {
-            let confirmed = confirm('Reset all state values?');
-            if (confirmed) {
-                store.clearAll();
-                alert('All state values deleted!');
-            }
-        });
+        resetBtn.addEventListener('click', actions.resetAll);
         let quickSettings = gradioApp().getElementById("quicksettings");
         resetBtn.className = quickSettings.querySelector('button').className;
         quickSettings.appendChild(resetBtn);
@@ -268,8 +262,43 @@ state.core = (function () {
             'marginTop': '20px',
             'marginBottom': '10px'
         });
+        buttonsContainer.appendChild(state.utils.html.create('hr'));
+        buttonsContainer.appendChild(state.utils.html.create('div', { innerHTML: 'Actions' }, { marginBottom: '10px' }));
+        buttonsContainer.appendChild(state.utils.html.createButton('Reset All', actions.resetAll));
+        buttonsContainer.appendChild(state.utils.html.createButton('Export State', actions.exportState));
+        buttonsContainer.appendChild(state.utils.html.createButton('Import State', actions.importState));
+        buttonsContainer.appendChild(state.utils.html.create('input', {
+            id: 'state-import-file', type: 'file', accept: 'application/json'
+        }));
         page.appendChild(buttonsContainer);
     }
+
+    let actions = {
+        resetAll: function () {
+            let confirmed = confirm('Reset all state values?');
+            if (confirmed) {
+                store.clearAll();
+                alert('All state values deleted!');
+            }
+        },
+        exportState: function () {
+            state.utils.saveFile('sd-webui-state', store.getAll());
+        },
+        importState: function () {
+            const fileInput = gradioApp().getElementById('state-import-file');
+            if (! fileInput.files || ! fileInput.files[0]) {
+                alert('Please select a JSON file!');
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                store.load(JSON.parse(event.target.result));
+                window.location.reload();
+            };
+            reader.readAsText(file);
+        }
+    };
 
     return { init };
 }());
