@@ -17,6 +17,7 @@ def on_ui_settings():
         "choices": [
             "prompt",
             "negative_prompt",
+            "extra_networks",
             "styles",
             "sampling",
             "sampling_steps",
@@ -42,6 +43,7 @@ def on_ui_settings():
         "choices": [
             "prompt",
             "negative_prompt",
+            "extra_networks",
             "styles",
             "sampling",
             "resize_mode",
