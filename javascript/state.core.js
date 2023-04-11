@@ -38,6 +38,10 @@ state.core = (function () {
         'styles': 'styles'
     };
 
+    const TOGGLE_BUTTONS = {
+        'extra_networks': 'extra_networks',
+    };
+
     let store = null;
 
     function hasSetting(id, tab) {
@@ -59,6 +63,16 @@ state.core = (function () {
             .catch(error => console.error('[state]: Error getting JSON file:', error));
     }
 
+    function forEachElement(list, config, action) {
+        for (const [settingId, element] of Object.entries(list)) {
+            TABS.forEach(tab => {
+                if (config.hasSetting(settingId, tab)) {
+                    action(element, tab);
+                }
+            });
+        }
+    }
+
     function load(config) {
 
         store = new state.Store();
@@ -66,37 +80,25 @@ state.core = (function () {
         loadUI();
         restoreTabs(config);
 
-        for (const [settingId, element] of Object.entries(ELEMENTS)) {
-            TABS.forEach(tab => {
-                if (config.hasSetting(settingId, tab)) {
-                    handleSavedInput(`${tab}_${element}`);
-                }
-            });
-        }
+        forEachElement(ELEMENTS, config, (element, tab) => {
+            handleSavedInput(`${tab}_${element}`);
+        });
 
-        for (const [settingId, element] of Object.entries(ELEMENTS_WITHOUT_PREFIX)) {
-            TABS.forEach(tab => {
-                if (config.hasSetting(settingId, tab)) {
-                    handleSavedInput(`${element}`);
-                }
-            });
-        }
+        forEachElement(ELEMENTS_WITHOUT_PREFIX, config, (element, tab) => {
+            handleSavedInput(`${element}`);
+        });
 
-        for (const [settingId, element] of Object.entries(SELECTS)) {
-            TABS.forEach(tab => {
-                if (config.hasSetting(settingId, tab)) {
-                    handleSavedSelects(`${tab}_${element}`);
-                }
-            });
-        }
+        forEachElement(SELECTS, config, (element, tab) => {
+            handleSavedSelects(`${tab}_${element}`);
+        });
 
-        for (const [settingId, element] of Object.entries(MULTI_SELECTS)) {
-            TABS.forEach(tab => {
-                if (config.hasSetting(settingId, tab)) {
-                    handleSavedMultiSelects(`${tab}_${element}`);
-                }
-            });
-        }
+        forEachElement(MULTI_SELECTS, config, (element, tab) => {
+            handleSavedMultiSelects(`${tab}_${element}`);
+        });
+
+        forEachElement(TOGGLE_BUTTONS, config, (element, tab) => {
+            handleToggleButton(`${tab}_${element}`);
+        });
 
         handleExtensions(config);
         handleSettingsPage();
@@ -206,6 +208,17 @@ state.core = (function () {
     function handleSavedMultiSelects(id) {
         const select = gradioApp().getElementById(`${id}`);
         state.utils.handleMultipleSelect(select, id, store);
+    }
+
+    function handleToggleButton(id) {
+        const btn = gradioApp().querySelector(`button#${id}`);
+        if (! btn) { return; }
+        if (store.get(id) === 'true') {
+            state.utils.triggerMouseEvent(btn);
+        }
+        btn.addEventListener('click', function () {
+           store.set(id, Array.from(this.classList).indexOf('secondary-down') === -1);
+        });
     }
 
     function handleExtensions(config) {
