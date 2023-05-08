@@ -104,13 +104,61 @@ state.core = (function () {
         handleSettingsPage();
     }
 
+    function createHeaderButton(title, text, className, style, action) {
+
+        const button = state.utils.html.create('button', {
+            title: title,
+            innerHTML: text,
+            className: className,
+        }, style);
+
+        if (action) {
+            button.addEventListener('click', action);
+        }
+
+        return button;
+    }
+
+    function createHeaderFileInput(title, text, className) {
+
+        let inputId = 'state-import-file-inline';
+
+        let importBtn = createHeaderButton(title,text, className, {
+            display: 'none'
+        }, () => {
+            actions.importState(inputId);
+        });
+
+        let label = state.utils.html.create('label', {}, { cursor: 'pointer' });
+        label.appendChild(state.utils.html.create('input', {
+            type: 'file',
+            id: inputId,
+            accept: 'application/json',
+        }, {
+            display: 'none'
+        }));
+        label.appendChild(document.createTextNode(text));
+        label.addEventListener('change', () => {
+            importBtn.dispatchEvent(new Event('click'));
+        });
+
+        let button = createHeaderButton(title, '', className, {});
+        button.appendChild(label);
+
+        return {
+            hiddenButton: importBtn,
+            button: button
+        };
+    }
+
     function loadUI() {
-        let resetBtn = document.createElement("button");
-        resetBtn.innerHTML = "*️⃣";
-        resetBtn.addEventListener('click', actions.resetAll);
         let quickSettings = gradioApp().getElementById("quicksettings");
-        resetBtn.className = quickSettings.querySelector('button').className;
-        quickSettings.appendChild(resetBtn);
+        let className = quickSettings.querySelector('button').className;
+        quickSettings.appendChild(createHeaderButton('State: Reset', "*️⃣", className, {}, actions.resetAll));
+        quickSettings.appendChild(createHeaderButton('State: Export',"📤", className, {}, actions.exportState));
+        let fileInput = createHeaderFileInput('State: Import',"📥", className);
+        quickSettings.appendChild(fileInput.hiddenButton);
+        quickSettings.appendChild(fileInput.button);
     }
 
 
@@ -297,8 +345,8 @@ state.core = (function () {
         exportState: function () {
             state.utils.saveFile('sd-webui-state', store.getAll());
         },
-        importState: function () {
-            const fileInput = gradioApp().getElementById('state-import-file');
+        importState: function (id) {
+            const fileInput = gradioApp().getElementById(id || 'state-import-file');
             if (! fileInput.files || ! fileInput.files[0]) {
                 alert('Please select a JSON file!');
                 return;
