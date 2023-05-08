@@ -36,6 +36,7 @@ def on_ui_settings():
             "hires_resize_x",
             "hires_resize_y",
             "hires_denoising_strength",
+            "script"
         ]
     }, section=section))
 
@@ -56,7 +57,8 @@ def on_ui_settings():
             "batch_size",
             "cfg_scale",
             "denoising_strength",
-            "seed"
+            "seed",
+            "script"
         ]
     }, section=section))
 

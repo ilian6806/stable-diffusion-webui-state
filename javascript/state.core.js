@@ -32,6 +32,7 @@ state.core = (function () {
     const SELECTS = {
         'sampling': 'sampling',
         'hires_upscaler': 'hr_upscaler',
+        'script': '#script_list',
     };
 
     const MULTI_SELECTS = {
@@ -198,6 +199,16 @@ state.core = (function () {
         bindTabClickEvents(); // dirty hack here...
     }
 
+    function getElement(id) {
+        for (let i = 0; i < TABS.length; i++) {
+            if (id.startsWith(`${TABS[i]}_#`)) {
+                // handle elements with same ids in different tabs...
+                return gradioApp().querySelector('#tab_' + id.replace(`${TABS[i]}_#`, `${TABS[i]} #`));
+            }
+        }
+        return gradioApp().getElementById(id);
+    }
+
     function handleSavedInput(id) {
 
         const elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} input`);
@@ -249,8 +260,7 @@ state.core = (function () {
     }
 
     function handleSavedSelects(id) {
-        const select = gradioApp().getElementById(`${id}`);
-        state.utils.handleSelect(select, id, store);
+        state.utils.handleSelect(getElement(id), id, store);
     }
 
     function handleSavedMultiSelects(id) {
@@ -302,7 +312,7 @@ state.core = (function () {
                         el.checked = value;
                         state.utils.triggerEvent(el, 'change');
                     }
-                } else  if (el.checked === value) {
+                } else if (el.checked === value) {
                     el.checked = !value;
                     state.utils.triggerEvent(el, 'change');
                 }

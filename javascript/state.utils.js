@@ -77,9 +77,15 @@ state.utils = {
 
             setTimeout(() => {
                 state.utils.onContentChange(select, function (el) {
-                    const selected = el.querySelector('span.single-select');
+                    let selected = el.querySelector('span.single-select');
                     if (selected) {
                         store.set(id, selected.textContent);
+                    } else {
+                        // new gradio version...
+                        let input = select.querySelector('input');
+                        if (input) {
+                            store.set(id, input.value);
+                        }
                     }
                 });
             }, 150);
