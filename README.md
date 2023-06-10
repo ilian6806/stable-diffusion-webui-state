@@ -15,6 +15,10 @@ This extension is for AUTOMATIC1111's [Stable Diffusion web UI](https://github.c
 * Supported extensions:
     - Control Net
 
+### Usage
+
+Demo video: [https://www.youtube.com/watch?v=hXsxBKYMGaA](https://www.youtube.com/watch?v=hXsxBKYMGaA)
+
 ### Install
 
 Use **Install from URL** option with this repo url. 
