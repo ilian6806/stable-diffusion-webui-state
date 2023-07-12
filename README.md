@@ -14,6 +14,9 @@ This extension is for AUTOMATIC1111's [Stable Diffusion web UI](https://github.c
 * Import / Export and Reset state options
 * Supported extensions:
     - Control Net
+    - ADetailer
+    - Dynamic Prompting
+    - Multidiffusion upscale/Tiled Diffusion & VAE
 
 ### Usage
 
