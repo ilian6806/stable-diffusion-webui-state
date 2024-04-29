@@ -1,5 +1,6 @@
 window.state = window.state || {};
 state = window.state;
+let selectingQueue = -1;
 
 state.utils = {
     triggerEvent: function triggerEvent(element, event) {
@@ -59,20 +60,23 @@ state.utils = {
             let value = store.get(id);
 
             if (value) {
-
-                let input = select.querySelector('input');
-                state.utils.triggerMouseEvent(input, 'focus');
-
+                selectingQueue += 1;
                 setTimeout(() => {
-                    let items = Array.from(select.querySelectorAll('ul li'));
-                    items.forEach(li => {
-                        if (li.lastChild.wholeText.trim() === value) {
-                            state.utils.triggerMouseEvent(li, 'mousedown');
-                            return false;
-                        }
-                    });
-                    state.utils.triggerMouseEvent(input, 'blur');
-                }, 100);
+                    let input = select.querySelector('input');
+                    state.utils.triggerMouseEvent(input, 'focus');
+
+                    setTimeout(() => {
+                        let items = Array.from(select.querySelectorAll('ul li'));
+                        items.forEach(li => {
+                            if (li.lastChild.wholeText.trim() === value) {
+                                state.utils.triggerMouseEvent(li, 'mousedown');
+                                return false;
+                            }
+                        });
+                        state.utils.triggerMouseEvent(input, 'blur');
+                        selectingQueue -= 1;
+                    }, 100);
+                }, selectingQueue * 200)
             }
 
             setTimeout(() => {

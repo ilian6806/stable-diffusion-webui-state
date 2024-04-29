@@ -64,7 +64,10 @@ def on_ui_settings():
 
     shared.opts.add_option("state_extensions", shared.OptionInfo([], "Saved elements from extensions", gr.CheckboxGroup, lambda: {
         "choices": [
-            "control-net"
+            "control-net",
+            "adetailer",
+            "multidiffusion",
+            "dynamic prompting"
         ]
     }, section=section))
 
