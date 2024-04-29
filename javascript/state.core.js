@@ -31,6 +31,7 @@ state.core = (function () {
 
     const SELECTS = {
         'sampling': 'sampling',
+        'scheduler': 'scheduler',
         'hires_upscaler': 'hr_upscaler',
         'script': '#script_list',
     };
