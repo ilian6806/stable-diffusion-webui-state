@@ -10,19 +10,19 @@ state.core = (function () {
         'sampling_steps': 'steps',
         'restore_faces': 'restore_faces',
         'tiling': 'tiling',
-        'hires_fix': 'enable_hr',
         'hires_steps': 'hires_steps',
         'hires_scale': 'hr_scale',
         'hires_resize_x': 'hr_resize_x',
         'hires_resize_y': 'hr_resize_y',
         'hires_denoising_strength': 'denoising_strength',
+        'refiner_switch': 'switch_at',
         'width': 'width',
         'height': 'height',
         'batch_count': 'batch_count',
         'batch_size': 'batch_size',
         'cfg_scale': 'cfg_scale',
         'denoising_strength': 'denoising_strength',
-        'seed': 'seed'
+        'seed': 'seed',
     };
 
     const ELEMENTS_WITHOUT_PREFIX = {
@@ -33,6 +33,7 @@ state.core = (function () {
         'sampling': 'sampling',
         'scheduler': 'scheduler',
         'hires_upscaler': 'hr_upscaler',
+        'refiner_checkpoint': 'checkpoint',
         'script': '#script_list',
     };
 
@@ -42,6 +43,8 @@ state.core = (function () {
 
     const TOGGLE_BUTTONS = {
         'extra_networks': 'extra_networks',
+        'hires_fix': 'hr',
+        'refiner': 'enable',
     };
 
     let store = null;
@@ -216,6 +219,7 @@ state.core = (function () {
         const events = ['change', 'input'];
 
         if (! elements || ! elements.length) {
+            state.logging.warn(`Input not found: ${id}`);
             return;
         }
 
@@ -270,13 +274,24 @@ state.core = (function () {
     }
 
     function handleToggleButton(id) {
-        const btn = gradioApp().querySelector(`button#${id}`);
-        if (! btn) { return; }
+        let btn = gradioApp().querySelector(`button#${id}`);
+        if (! btn) { // New gradio version
+            btn = gradioApp().querySelector(`.input-accordion#${id}`);
+        }
+        if (! btn) {
+            state.logging.warn(`Button not found: ${id}`);
+            return;
+        }
         if (store.get(id) === 'true') {
-            state.utils.triggerMouseEvent(btn);
+            state.utils.clickToggleMenu(btn);
         }
         btn.addEventListener('click', function () {
-           store.set(id, Array.from(this.classList).indexOf('secondary-down') === -1);
+            let classList = Array.from(this.classList);
+            if (btn.tagName === 'BUTTON') { // Old gradio version
+                store.set(id, classList.indexOf('secondary-down') === -1);
+            } else {
+                store.set(id, classList.indexOf('input-accordion-open') > -1);
+            }
         });
     }
 
