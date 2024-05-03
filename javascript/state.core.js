@@ -4,6 +4,7 @@ state = window.state;
 state.core = (function () {
 
     const TABS = ['txt2img', 'img2img'];
+
     const ELEMENTS = {
         'prompt': 'prompt',
         'negative_prompt': 'neg_prompt',
@@ -27,6 +28,21 @@ state.core = (function () {
 
     const ELEMENTS_WITHOUT_PREFIX = {
         'resize_mode': 'resize_mode',
+    };
+
+    const ELEMENTS_WITH_DUPLICATE_IDS = {
+        INPUTS: {
+            'upscaler_2_visibility': 'extras_upscaler_2_visibility',
+            'upscaler_scale_by_resize': 'extras_upscaling_resize',
+            'upscaler_scale_by_max_side_length': 'extras_upscale_max_side_length',
+            'upscaler_scale_to_w': 'extras_upscaling_resize_w',
+            'upscaler_scale_to_h': 'extras_upscaling_resize_h',
+            'upscaler_scale_to_crop': 'extras_upscaling_crop',
+        },
+        SELECTS: {
+            'upscaler_1': 'extras_upscaler_1',
+            'upscaler_2': 'extras_upscaler_2',
+        }
     };
 
     const SELECTS = {
@@ -103,6 +119,14 @@ state.core = (function () {
 
         forEachElement(TOGGLE_BUTTONS, config, (element, tab) => {
             handleToggleButton(`${tab}_${element}`);
+        });
+
+        forEachElement(ELEMENTS_WITH_DUPLICATE_IDS.INPUTS, config, (element, tab) => {
+            handleSavedInput(`${element}`, true);
+        });
+
+        forEachElement(ELEMENTS_WITH_DUPLICATE_IDS.SELECTS, config, (element, tab) => {
+            handleSavedSelects(`${element}`, true);
         });
 
         handleExtensions(config);
@@ -213,9 +237,16 @@ state.core = (function () {
         return gradioApp().getElementById(id);
     }
 
-    function handleSavedInput(id) {
+    function handleSavedInput(id, duplicateIds) {
 
-        const elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} input`);
+        let elements = null;
+
+        if (duplicateIds) {
+            elements = gradioApp().querySelectorAll(`[id="${id}"] textarea, [id="${id}"] input`);
+        } else {
+            elements = gradioApp().querySelectorAll(`#${id} textarea, #${id} input`);
+        }
+
         const events = ['change', 'input'];
 
         if (! elements || ! elements.length) {
@@ -264,8 +295,19 @@ state.core = (function () {
         });
     }
 
-    function handleSavedSelects(id) {
-        state.utils.handleSelect(getElement(id), id, store);
+    function handleSavedSelects(id, duplicateIds) {
+        if (duplicateIds) {
+            const elements = gradioApp().querySelectorAll(`[id="${id}"]`);
+            if (! elements || ! elements.length) {
+                state.logging.warn(`Select not found: ${id}`);
+                return;
+            }
+            elements.forEach(function (element) {
+                state.utils.handleSelect(element, id, store);
+            });
+        } else {
+            state.utils.handleSelect(getElement(id), id, store);
+        }
     }
 
     function handleSavedMultiSelects(id) {
