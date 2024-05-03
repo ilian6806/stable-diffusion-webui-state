@@ -17,7 +17,6 @@ def on_ui_settings():
         "choices": [
             "prompt",
             "negative_prompt",
-            "extra_networks",
             "styles",
             "sampling",
             "scheduler",
@@ -28,8 +27,6 @@ def on_ui_settings():
             "batch_size",
             "cfg_scale",
             "seed",
-            "restore_faces",
-            "tiling",
             "hires_fix",
             "hires_upscaler",
             "hires_steps",
@@ -56,7 +53,6 @@ def on_ui_settings():
         "choices": [
             "prompt",
             "negative_prompt",
-            "extra_networks",
             "styles",
             "refiner",
             "refiner_checkpoint",
@@ -73,8 +69,6 @@ def on_ui_settings():
             "scheduler",
             "resize_mode",
             "sampling_steps",
-            "restore_faces",
-            "tiling",
             "width",
             "height",
             "batch_count",
