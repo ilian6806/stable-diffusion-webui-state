@@ -37,6 +37,9 @@ def on_ui_settings():
             "hires_resize_x",
             "hires_resize_y",
             "hires_denoising_strength",
+            "refiner",
+            "refiner_checkpoint",
+            "refiner_switch",
             "script"
         ]
     }, section=section))
@@ -47,6 +50,9 @@ def on_ui_settings():
             "negative_prompt",
             "extra_networks",
             "styles",
+            "refiner",
+            "refiner_checkpoint",
+            "refiner_switch",
             "sampling",
             "scheduler",
             "resize_mode",

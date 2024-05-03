@@ -15,13 +15,14 @@ state.core = (function () {
         'hires_resize_x': 'hr_resize_x',
         'hires_resize_y': 'hr_resize_y',
         'hires_denoising_strength': 'denoising_strength',
+        'refiner_switch': 'switch_at',
         'width': 'width',
         'height': 'height',
         'batch_count': 'batch_count',
         'batch_size': 'batch_size',
         'cfg_scale': 'cfg_scale',
         'denoising_strength': 'denoising_strength',
-        'seed': 'seed'
+        'seed': 'seed',
     };
 
     const ELEMENTS_WITHOUT_PREFIX = {
@@ -32,6 +33,7 @@ state.core = (function () {
         'sampling': 'sampling',
         'scheduler': 'scheduler',
         'hires_upscaler': 'hr_upscaler',
+        'refiner_checkpoint': 'checkpoint',
         'script': '#script_list',
     };
 
@@ -41,7 +43,8 @@ state.core = (function () {
 
     const TOGGLE_BUTTONS = {
         'extra_networks': 'extra_networks',
-        'hires_fix': 'hr'
+        'hires_fix': 'hr',
+        'refiner': 'enable',
     };
 
     let store = null;
