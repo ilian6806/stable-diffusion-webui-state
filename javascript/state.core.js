@@ -9,8 +9,6 @@ state.core = (function () {
         'prompt': 'prompt',
         'negative_prompt': 'neg_prompt',
         'sampling_steps': 'steps',
-        'restore_faces': 'restore_faces',
-        'tiling': 'tiling',
         'hires_steps': 'hires_steps',
         'hires_scale': 'hr_scale',
         'hires_resize_x': 'hr_resize_x',
@@ -58,7 +56,6 @@ state.core = (function () {
     };
 
     const TOGGLE_BUTTONS = {
-        'extra_networks': 'extra_networks',
         'hires_fix': 'hr',
         'refiner': 'enable',
     };
