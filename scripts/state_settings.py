@@ -37,14 +37,14 @@ def on_ui_settings():
             "refiner",
             "refiner_checkpoint",
             "refiner_switch",
-            'upscaler_scale_by_resize',
-            'upscaler_scale_by_max_side_length',
-            'upscaler_scale_to_w',
-            'upscaler_scale_to_h',
-            'upscaler_scale_to_crop',
-            'upscaler_1',
-            'upscaler_2',
-            'upscaler_2_visibility',
+            "upscaler_scale_by_resize",
+            "upscaler_scale_by_max_side_length",
+            "upscaler_scale_to_w",
+            "upscaler_scale_to_h",
+            "upscaler_scale_to_crop",
+            "upscaler_1",
+            "upscaler_2",
+            "upscaler_2_visibility",
             "script"
         ]
     }, section=section))
@@ -57,14 +57,14 @@ def on_ui_settings():
             "refiner",
             "refiner_checkpoint",
             "refiner_switch",
-            'upscaler_scale_by_resize',
-            'upscaler_scale_by_max_side_length',
-            'upscaler_scale_to_w',
-            'upscaler_scale_to_h',
-            'upscaler_scale_to_crop',
-            'upscaler_1',
-            'upscaler_2',
-            'upscaler_2_visibility',
+            "upscaler_scale_by_resize",
+            "upscaler_scale_by_max_side_length",
+            "upscaler_scale_to_w",
+            "upscaler_scale_to_h",
+            "upscaler_scale_to_crop",
+            "upscaler_1",
+            "upscaler_2",
+            "upscaler_2_visibility",
             "sampling",
             "scheduler",
             "resize_mode",
@@ -100,6 +100,5 @@ def on_ui_settings():
             "Export Button"
         ],
     }, section=section))
-
 
 scripts.script_callbacks.on_ui_settings(on_ui_settings)

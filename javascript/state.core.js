@@ -5,7 +5,7 @@ state.core = (function () {
 
     const TABS = ['txt2img', 'img2img'];
 
-    const ELEMENTS = {
+    const INPUTS = { // Basic input elements
         'prompt': 'prompt',
         'negative_prompt': 'neg_prompt',
         'sampling_steps': 'steps',
@@ -15,50 +15,67 @@ state.core = (function () {
         'hires_resize_y': 'hr_resize_y',
         'hires_denoising_strength': 'denoising_strength',
         'refiner_switch': 'switch_at',
+        'upscaler_2_visibility': 'extras_upscaler_2_visibility',
+        'upscaler_scale_by_resize': 'extras_upscaling_resize',
+        'upscaler_scale_by_max_side_length': 'extras_upscale_max_side_length',
+        'upscaler_scale_to_w': 'extras_upscaling_resize_w',
+        'upscaler_scale_to_h': 'extras_upscaling_resize_h',
+        'upscaler_scale_to_crop': 'extras_upscaling_crop',
         'width': 'width',
         'height': 'height',
         'batch_count': 'batch_count',
         'batch_size': 'batch_size',
         'cfg_scale': 'cfg_scale',
         'denoising_strength': 'denoising_strength',
+        'resize_mode': 'resize_mode',
         'seed': 'seed',
     };
 
-    const ELEMENTS_WITHOUT_PREFIX = {
-        'resize_mode': 'resize_mode',
-    };
-
-    const ELEMENTS_WITH_DUPLICATE_IDS = {
-        INPUTS: {
-            'upscaler_2_visibility': 'extras_upscaler_2_visibility',
-            'upscaler_scale_by_resize': 'extras_upscaling_resize',
-            'upscaler_scale_by_max_side_length': 'extras_upscale_max_side_length',
-            'upscaler_scale_to_w': 'extras_upscaling_resize_w',
-            'upscaler_scale_to_h': 'extras_upscaling_resize_h',
-            'upscaler_scale_to_crop': 'extras_upscaling_crop',
-        },
-        SELECTS: {
-            'upscaler_1': 'extras_upscaler_1',
-            'upscaler_2': 'extras_upscaler_2',
-        }
-    };
-
-    const SELECTS = {
+    const SELECTS = { // Dropdowns
         'sampling': 'sampling',
         'scheduler': 'scheduler',
         'hires_upscaler': 'hr_upscaler',
         'refiner_checkpoint': 'checkpoint',
+        'upscaler_1': 'extras_upscaler_1',
+        'upscaler_2': 'extras_upscaler_2',
         'script': '#script_list',
     };
 
-    const MULTI_SELECTS = {
+    const MULTI_SELECTS = { // Multi-select dropdowns
         'styles': 'styles'
     };
 
-    const TOGGLE_BUTTONS = {
+    const TOGGLE_BUTTONS = { // Toggle buttons
         'hires_fix': 'hr',
         'refiner': 'enable',
     };
+
+    // *** Exceptions *** //
+
+    // Elements that don't have a tab prefix
+    const ELEMENTS_WITHOUT_PREFIX = [
+        'resize_mode',
+        'upscaler_2_visibility',
+        'upscaler_scale_by_resize',
+        'upscaler_scale_by_max_side_length',
+        'upscaler_scale_to_w',
+        'upscaler_scale_to_h',
+        'upscaler_scale_to_crop',
+        'upscaler_1',
+        'upscaler_2',
+    ];
+
+    // Elements that have the same id in different tabs
+    const ELEMENTS_WITH_DUPLICATE_IDS = [
+        'upscaler_2_visibility',
+        'upscaler_scale_by_resize',
+        'upscaler_scale_by_max_side_length',
+        'upscaler_scale_to_w',
+        'upscaler_scale_to_h',
+        'upscaler_scale_to_crop',
+        'upscaler_1',
+        'upscaler_2',
+    ];
 
     let store = null;
 
@@ -75,19 +92,43 @@ state.core = (function () {
                     config.hasSetting = hasSetting
                     load(config);
                 } catch (error) {
-                    console.error('[state]: Error:', error);
+                    state.logging.error(error);
                 }
             })
-            .catch(error => console.error('[state]: Error getting JSON file:', error));
+            .catch(error => state.logging.error(error));
     }
 
     function forEachElement(list, config, action) {
-        for (const [settingId, element] of Object.entries(list)) {
+        for (const [settingId, elementId] of Object.entries(list)) {
             TABS.forEach(tab => {
                 if (config.hasSetting(settingId, tab)) {
-                    action(element, tab);
+                    action(settingId, elementId, tab);
                 }
             });
+        }
+    }
+
+    function executeElementHandler(handler, settingId, elementId, tab) {
+
+        // Handler will use much slower '[id="elementId"]' selector if elementId is in ELEMENTS_WITH_DUPLICATE_IDS
+        let useDuplicateIdsSelector = ELEMENTS_WITH_DUPLICATE_IDS.indexOf(settingId) > -1;
+
+        if (ELEMENTS_WITHOUT_PREFIX.indexOf(settingId) > -1) {
+            return handler(elementId, useDuplicateIdsSelector);
+        } else {
+            return handler(`${tab}_${elementId}`, useDuplicateIdsSelector);
+        }
+    }
+
+    function getHandlerByElementId(settingId) {
+        if (settingId in INPUTS) {
+            return handleSavedInput;
+        } else if (settingId in SELECTS) {
+            return handleSavedSelects;
+        } else if (settingId in MULTI_SELECTS) {
+            return handleSavedMultiSelects;
+        } else if (settingId in TOGGLE_BUTTONS) {
+            return handleToggleButton;
         }
     }
 
@@ -98,32 +139,15 @@ state.core = (function () {
         loadUI(config);
         restoreTabs(config);
 
-        forEachElement(ELEMENTS, config, (element, tab) => {
-            handleSavedInput(`${tab}_${element}`);
-        });
+        const ALL_ELEMENTS = Object.assign({}, INPUTS, SELECTS, MULTI_SELECTS, TOGGLE_BUTTONS);
 
-        forEachElement(ELEMENTS_WITHOUT_PREFIX, config, (element, tab) => {
-            handleSavedInput(`${element}`);
-        });
-
-        forEachElement(SELECTS, config, (element, tab) => {
-            handleSavedSelects(`${tab}_${element}`);
-        });
-
-        forEachElement(MULTI_SELECTS, config, (element, tab) => {
-            handleSavedMultiSelects(`${tab}_${element}`);
-        });
-
-        forEachElement(TOGGLE_BUTTONS, config, (element, tab) => {
-            handleToggleButton(`${tab}_${element}`);
-        });
-
-        forEachElement(ELEMENTS_WITH_DUPLICATE_IDS.INPUTS, config, (element, tab) => {
-            handleSavedInput(`${element}`, true);
-        });
-
-        forEachElement(ELEMENTS_WITH_DUPLICATE_IDS.SELECTS, config, (element, tab) => {
-            handleSavedSelects(`${element}`, true);
+        forEachElement(ALL_ELEMENTS, config, (settingId, elementId, tab) => {
+            let method = getHandlerByElementId(settingId);
+            if (method) {
+                executeElementHandler(method, settingId, elementId, tab);
+            } else {
+                state.logging.warn(`Element handler not found for: ${elementId}`);
+            }
         });
 
         handleExtensions(config);
@@ -317,12 +341,12 @@ state.core = (function () {
         }
     }
 
-    function handleSavedMultiSelects(id) {
+    function handleSavedMultiSelects(id, duplicateIds) {
         const select = gradioApp().getElementById(`${id}`);
         state.utils.handleMultipleSelect(select, id, store);
     }
 
-    function handleToggleButton(id) {
+    function handleToggleButton(id, duplicateIds) {
         let btn = gradioApp().querySelector(`button#${id}`);
         if (! btn) { // New gradio version
             btn = gradioApp().querySelector(`.input-accordion#${id}`);
