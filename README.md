@@ -37,3 +37,10 @@ Go to **Settings->State** and check all parameters that you want to be preserved
 ### Contributing
 
 Feel free to submit PRs to develop!
+
+<p align="center">
+  ...and you can always buy me a :beer:! <br/><br/>
+  <a href="https://www.paypal.com/paypalme/ilian6806" target="_blank">
+    <img src="https://img.shields.io/badge/Donate-PayPal-green.svg" alt="Donate with PayPal"/>
+  </a>
+</p>
