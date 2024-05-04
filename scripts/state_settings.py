@@ -89,5 +89,17 @@ def on_ui_settings():
         ]
     }, section=section))
 
+    shared.opts.add_option("state_ui", shared.OptionInfo([
+            "Reset Button",
+            "Import Button",
+            "Export Button"
+    ], "State UI", gr.CheckboxGroup, lambda: {
+        "choices": [
+            "Reset Button",
+            "Import Button",
+            "Export Button"
+        ],
+    }, section=section))
+
 
 scripts.script_callbacks.on_ui_settings(on_ui_settings)

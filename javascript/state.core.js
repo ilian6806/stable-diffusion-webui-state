@@ -95,7 +95,7 @@ state.core = (function () {
 
         store = new state.Store();
 
-        loadUI();
+        loadUI(config);
         restoreTabs(config);
 
         forEachElement(ELEMENTS, config, (element, tab) => {
@@ -177,16 +177,26 @@ state.core = (function () {
         };
     }
 
-    function loadUI() {
+    function loadUI(config) {
+
         let quickSettings = gradioApp().getElementById("quicksettings");
         let className = quickSettings.querySelector('button').className;
-        quickSettings.appendChild(createHeaderButton('State: Reset', "*️⃣", className, {}, actions.resetAll));
-        quickSettings.appendChild(createHeaderButton('State: Export',"📤", className, {}, actions.exportState));
-        let fileInput = createHeaderFileInput('State: Import',"📥", className);
-        quickSettings.appendChild(fileInput.hiddenButton);
-        quickSettings.appendChild(fileInput.button);
-    }
+        let uiConfig = config['state_ui'];
 
+        if (!uiConfig || uiConfig.indexOf('Reset Button') > -1) {
+            quickSettings.appendChild(createHeaderButton('State: Reset', "*️⃣", className, {}, actions.resetAll));
+        }
+
+        if (!uiConfig || uiConfig.indexOf('Export Button') > -1) {
+            quickSettings.appendChild(createHeaderButton('State: Export',"📤", className, {}, actions.exportState));
+        }
+
+        if (!uiConfig || uiConfig.indexOf('Import Button') > -1) {
+            let fileInput = createHeaderFileInput('State: Import',"📥", className);
+            quickSettings.appendChild(fileInput.hiddenButton);
+            quickSettings.appendChild(fileInput.button);
+        }
+    }
 
     function restoreTabs(config) {
 

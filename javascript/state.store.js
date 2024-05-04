@@ -3,7 +3,7 @@ state = window.state;
 
 state.Store = function Store (prefix) {
     this.prefix = state.constants.LS_PREFIX + (prefix ? prefix + '-' : '');
-}
+};
 
 state.Store.prototype.set = function (key, value) {
     if (key.startsWith(this.prefix)) {
