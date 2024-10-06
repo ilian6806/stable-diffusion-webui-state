@@ -35,12 +35,13 @@ state.utils = {
             cancelable: true
         });
         element.dispatchEvent(mouseEvent);
-        let icon = element.querySelector('.icon');
+        let icon = element.parentNode.querySelector('.icon');
         if (icon) {
             icon.dispatchEvent(mouseEvent);
         }
-        let checkbox = element.querySelector('input[type="checkbox"]');
+        let checkbox = element.parentNode.querySelector('input[type="checkbox"]');
         if (checkbox) {
+            checkbox.checked = !checkbox.checked;
             checkbox.dispatchEvent(mouseEvent);
         }
         return element;

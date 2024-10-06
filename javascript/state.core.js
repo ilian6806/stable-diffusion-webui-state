@@ -48,6 +48,7 @@ state.core = (function () {
     const TOGGLE_BUTTONS = { // Toggle buttons
         'hires_fix': 'hr',
         'refiner': 'enable',
+        'tiled_diffusion': 'MD-t2i-enabled',
     };
 
     // *** Exceptions *** //
@@ -63,6 +64,7 @@ state.core = (function () {
         'upscaler_scale_to_crop',
         'upscaler_1',
         'upscaler_2',
+        'tiled_diffusion',
     ];
 
     // Elements that have the same id in different tabs
@@ -75,6 +77,7 @@ state.core = (function () {
         'upscaler_scale_to_crop',
         'upscaler_1',
         'upscaler_2',
+        'tiled_diffusion',
     ];
 
     let store = null;
@@ -349,7 +352,7 @@ state.core = (function () {
     function handleToggleButton(id, duplicateIds) {
         let btn = gradioApp().querySelector(`button#${id}`);
         if (! btn) { // New gradio version
-            btn = gradioApp().querySelector(`.input-accordion#${id}`);
+            btn = gradioApp().querySelector(`.input-accordion#${id} .label-wrap`);
         }
         if (! btn) {
             state.logging.warn(`Button not found: ${id}`);
@@ -359,7 +362,7 @@ state.core = (function () {
             state.utils.clickToggleMenu(btn);
         }
         btn.addEventListener('click', function () {
-            let classList = Array.from(this.classList);
+            let classList = Array.from(this.parentNode.classList);
             if (btn.tagName === 'BUTTON') { // Old gradio version
                 store.set(id, classList.indexOf('secondary-down') === -1);
             } else {

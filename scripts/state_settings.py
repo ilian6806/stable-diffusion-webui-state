@@ -45,6 +45,7 @@ def on_ui_settings():
             "upscaler_1",
             "upscaler_2",
             "upscaler_2_visibility",
+            "tiled_diffusion",
             "script"
         ]
     }, section=section))
@@ -76,6 +77,7 @@ def on_ui_settings():
             "cfg_scale",
             "denoising_strength",
             "seed",
+            "tiled_diffusion",
             "script"
         ]
     }, section=section))
