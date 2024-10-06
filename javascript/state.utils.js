@@ -29,21 +29,7 @@ state.utils = {
             state.logging.warn('Toggle button not found');
             return;
         }
-        let mouseEvent = new MouseEvent('click', {
-            view: window,
-            bubbles: true,
-            cancelable: true
-        });
-        element.dispatchEvent(mouseEvent);
-        let icon = element.parentNode.querySelector('.icon');
-        if (icon) {
-            icon.dispatchEvent(mouseEvent);
-        }
-        let checkbox = element.parentNode.querySelector('input[type="checkbox"]');
-        if (checkbox) {
-            checkbox.checked = !checkbox.checked;
-            checkbox.dispatchEvent(mouseEvent);
-        }
+        element.click();
         return element;
     },
     setValue: function setValue(element, value, event) {

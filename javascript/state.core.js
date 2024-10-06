@@ -350,24 +350,19 @@ state.core = (function () {
     }
 
     function handleToggleButton(id, duplicateIds) {
-        let btn = gradioApp().querySelector(`button#${id}`);
-        if (! btn) { // New gradio version
-            btn = gradioApp().querySelector(`.input-accordion#${id} .label-wrap`);
-        }
-        if (! btn) {
-            state.logging.warn(`Button not found: ${id}`);
-            return;
-        }
-        if (store.get(id) === 'true') {
-            state.utils.clickToggleMenu(btn);
-        }
-        btn.addEventListener('click', function () {
-            let classList = Array.from(this.parentNode.classList);
-            if (btn.tagName === 'BUTTON') { // Old gradio version
-                store.set(id, classList.indexOf('secondary-down') === -1);
-            } else {
-                store.set(id, classList.indexOf('input-accordion-open') > -1);
+
+        let selector = duplicateIds ? `[id="${id}"]` : `#${id}`;
+
+        elements = gradioApp().querySelectorAll(`.input-accordion${selector}>.label-wrap`);
+
+        elements.forEach(function (element) {
+            if (store.get(id) === 'true') {
+                state.utils.clickToggleMenu(element);
             }
+            element.addEventListener('click', function () {
+                let classList = Array.from(this.parentNode.classList);
+                store.set(id, classList.indexOf('input-accordion-open') > -1);
+            });
         });
     }
 
