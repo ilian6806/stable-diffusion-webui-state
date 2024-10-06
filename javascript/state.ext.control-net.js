@@ -9,17 +9,21 @@ state.extensions['control-net'] = (function () {
     let cnTabs = [];
 
     function handleToggle() {
-        let value = store.get('toggled');
-        let toggleBtn = container.querySelector('div.cursor-pointer, .label-wrap');
 
-        if (value && value === 'true') {
-            state.utils.triggerEvent(toggleBtn, 'click');
-            load();
-        }
-        toggleBtn.addEventListener('click', function () {
-            let span = this.querySelector('.transition, .icon');
-            store.set('toggled', span.style.transform !== 'rotate(90deg)');
-            load();
+        const id = 'toggled';
+
+        elements = gradioApp().querySelectorAll(`#controlnet>.label-wrap`);
+
+        elements.forEach(function (element) {
+            if (store.get(id) === 'true') {
+                state.utils.clickToggleMenu(element);
+                load();
+            }
+            element.addEventListener('click', function () {
+                let classList = Array.from(this.classList);
+                store.set(id, classList.indexOf('open') > -1);
+                load();
+            });
         });
     }
 
