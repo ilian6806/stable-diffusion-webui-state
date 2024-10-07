@@ -161,6 +161,23 @@ state.extensions['control-net'] = (function () {
         });
     }
 
+    function handleTextareas() {
+        handleContext((container, store) => {
+            let textareas = container.querySelectorAll('textarea');
+            textareas.forEach(function (textarea) {
+                let label = textarea.previousElementSibling;
+                let id = state.utils.txtToId(label.textContent);
+                let value = store.get(id);
+                if (value) {
+                    state.utils.setValue(textarea, value, 'change');
+                }
+                textarea.addEventListener('change', function () {
+                    store.set(id, this.value);
+                });
+            });
+        });
+    }
+
     function load() {
         setTimeout(function () {
             handleTabs();
@@ -168,6 +185,7 @@ state.extensions['control-net'] = (function () {
             handleSelects();
             handleSliders();
             handleRadioButtons();
+            handleTextareas();
         }, 500);
     }
 
