@@ -2,60 +2,98 @@ window.state = window.state || {};
 window.state.extensions = window.state.extensions || {};
 state = window.state;
 
+
+function ControlNetTabContext(tabName, container) {
+
+    this.tabName = tabName;
+    this.container = container;
+    this.store = new state.Store(`ext-control-net-${this.tabName}`);
+    this.tabElements = [];
+    this.cnTabs = [];
+
+    let tabs = this.container.querySelectorAll(':scope > div > div > .tabs > .tabitem');
+
+    if (tabs.length) {
+        tabs.forEach((tabContainer, i) => {
+            this.cnTabs.push({
+                container: tabContainer,
+                store: new state.Store(`ext-control-net-${this.tabName}-${i}`)
+            });
+        });
+    } else {
+        this.cnTabs.push[{
+            container: container,
+            store: new state.Store(`ext-control-net-${this.tabName}-${i}`)
+        }];
+    }
+}
+
 state.extensions['control-net'] = (function () {
 
-    let container = null;
-    let store = null;
-    let cnTabs = [];
+    let contexts = [];
 
     function handleToggle() {
 
         const id = 'toggled';
 
-        elements = gradioApp().querySelectorAll(`#controlnet>.label-wrap`);
+        contexts.forEach(context => {
 
-        elements.forEach(function (element) {
-            if (store.get(id) === 'true') {
-                state.utils.clickToggleMenu(element);
-                load();
-            }
-            element.addEventListener('click', function () {
-                let classList = Array.from(this.classList);
-                store.set(id, classList.indexOf('open') > -1);
-                load();
+            const elements = context.container.querySelectorAll(`:scope > .label-wrap`)
+
+            elements.forEach(element => {
+                if (context.store.get(id) === 'true') {
+                    state.utils.clickToggleMenu(element);
+                    load();
+                }
+                element.addEventListener('click', function () {
+                    let classList = Array.from(this.classList);
+                    context.store.set(id, classList.indexOf('open') > -1);
+                    load();
+                });
             });
         });
     }
 
     function bindTabEvents() {
-        const tabs = container.querySelectorAll('.tabs > div > button');
-        tabs.forEach(tab => { // dirty hack here
-            tab.removeEventListener('click', onTabClick);
-            tab.addEventListener('click', onTabClick);
+        contexts.forEach(context => {
+            const tabs = context.container.querySelectorAll(':scope > div > div > .tabs > div > button');
+            function onTabClick() {
+                context.store.set('tab', this.textContent);
+                bindTabEvents();
+            }
+            tabs.forEach(tab => { // dirty hack here
+                tab.removeEventListener('click', onTabClick);
+                tab.addEventListener('click', onTabClick);
+            });
+            context.tabElements = tabs;
         });
-        return tabs;
     }
 
     function handleTabs() {
-        let tabs = bindTabEvents();
-        let value = store.get('tab');
-        if (value) {
-            for (var i = 0; i < tabs.length; i++) {
-                if (tabs[i].textContent === value) {
-                    state.utils.triggerEvent(tabs[i], 'click');
-                    break;
+        bindTabEvents();
+        contexts.forEach(context => {
+            let value = context.store.get('tab');
+            if (value) {
+                for (var i = 0; i < context.tabElements.length; i++) {
+                    if (context.tabElements[i].textContent === value) {
+                        state.utils.triggerEvent(context.tabElements[i], 'click');
+                        break;
+                    }
                 }
             }
-        }
+        });
     }
 
-    function onTabClick() {
-        store.set('tab', this.textContent);
-        bindTabEvents();
+    function handleContext(action) {
+        contexts.forEach(context => {
+            context.cnTabs.forEach(({ container, store }) => {
+                action(container, store);
+            });
+        });
     }
 
     function handleCheckboxes() {
-        cnTabs.forEach(({ container, store }) => {
+        handleContext((container, store) => {
             let checkboxes = container.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(function (checkbox) {
                 let label = checkbox.nextElementSibling;
@@ -72,7 +110,7 @@ state.extensions['control-net'] = (function () {
     }
 
     function handleSelects() {
-        cnTabs.forEach(({ container, store }) => {
+        handleContext((container, store) => {
             container.querySelectorAll('.gradio-dropdown').forEach(select => {
                 let id = state.utils.txtToId(select.querySelector('label').firstChild.textContent);
                 let value = store.get(id);
@@ -85,7 +123,7 @@ state.extensions['control-net'] = (function () {
     }
 
     function handleSliders() {
-        cnTabs.forEach(({ container, store }) => {
+        handleContext((container, store) => {
             let sliders = container.querySelectorAll('input[type="range"]');
             sliders.forEach(function (slider) {
                 let label = slider.previousElementSibling.querySelector('label span');
@@ -102,7 +140,7 @@ state.extensions['control-net'] = (function () {
     }
 
     function handleRadioButtons() {
-        cnTabs.forEach(({ container, store }) => {
+        handleContext((container, store) => {
             let fieldsets = container.querySelectorAll('fieldset');
             fieldsets.forEach(function (fieldset) {
                 let label = fieldset.firstChild.nextElementSibling;
@@ -123,6 +161,23 @@ state.extensions['control-net'] = (function () {
         });
     }
 
+    function handleTextareas() {
+        handleContext((container, store) => {
+            let textareas = container.querySelectorAll('textarea');
+            textareas.forEach(function (textarea) {
+                let label = textarea.previousElementSibling;
+                let id = state.utils.txtToId(label.textContent);
+                let value = store.get(id);
+                if (value) {
+                    state.utils.setValue(textarea, value, 'change');
+                }
+                textarea.addEventListener('change', function () {
+                    store.set(id, this.value);
+                });
+            });
+        });
+    }
+
     function load() {
         setTimeout(function () {
             handleTabs();
@@ -130,34 +185,20 @@ state.extensions['control-net'] = (function () {
             handleSelects();
             handleSliders();
             handleRadioButtons();
+            handleTextareas();
         }, 500);
     }
 
     function init() {
 
-        container = gradioApp().getElementById('controlnet');
-        store = new state.Store('ext-control-net');
+        let elements = gradioApp().querySelectorAll('#controlnet');
 
-        if (! container) {
+        if (! elements.length) {
             return;
         }
 
-        let tabs = container.querySelectorAll('.tabitem');
-
-        if (tabs.length) {
-            cnTabs = [];
-            tabs.forEach((tabContainer, i) => {
-                cnTabs.push({
-                    container: tabContainer,
-                    store: new state.Store('ext-control-net-' + i)
-                });
-            });
-        } else {
-            cnTabs = [{
-                container: container,
-                store: new state.Store('ext-control-net-0')
-            }];
-        }
+        contexts[0] = new ControlNetTabContext('txt2img', elements[0]);
+        contexts[1] = new ControlNetTabContext('img2img', elements[1]);
 
         handleToggle();
         load();
