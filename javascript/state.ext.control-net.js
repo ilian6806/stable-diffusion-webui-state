@@ -11,7 +11,17 @@ function ControlNetTabContext(tabName, container) {
     this.tabElements = [];
     this.cnTabs = [];
 
+    // Try multiple selectors for compatibility with different Gradio/Forge versions
     let tabs = this.container.querySelectorAll(':scope > div > div > .tabs > .tabitem');
+    if (!tabs.length) {
+        tabs = this.container.querySelectorAll('.tabitem');
+    }
+    if (!tabs.length) {
+        tabs = this.container.querySelectorAll('[id*="tabitem"]');
+    }
+    if (!tabs.length) {
+        tabs = this.container.querySelectorAll('.tabs > div[role="tabpanel"]');
+    }
 
     if (tabs.length) {
         tabs.forEach((tabContainer, i) => {
@@ -21,10 +31,10 @@ function ControlNetTabContext(tabName, container) {
             });
         });
     } else {
-        this.cnTabs.push[{
+        this.cnTabs.push({
             container: container,
-            store: new state.Store(`ext-control-net-${this.tabName}-${i}`)
-        }];
+            store: new state.Store(`ext-control-net-${this.tabName}-0`)
+        });
     }
 }
 
@@ -38,7 +48,11 @@ state.extensions['control-net'] = (function () {
 
         contexts.forEach(context => {
 
-            const elements = context.container.querySelectorAll(`:scope > .label-wrap`)
+            // Try multiple selectors for compatibility
+            let elements = context.container.querySelectorAll(`:scope > .label-wrap`);
+            if (!elements.length) {
+                elements = context.container.querySelectorAll('.label-wrap');
+            }
 
             elements.forEach(element => {
                 if (context.store.get(id) === 'true') {
@@ -46,8 +60,11 @@ state.extensions['control-net'] = (function () {
                     load();
                 }
                 element.addEventListener('click', function () {
-                    let classList = Array.from(this.classList);
-                    context.store.set(id, classList.indexOf('open') > -1);
+                    // Check for open state using multiple methods for compatibility
+                    let isOpen = this.classList.contains('open') ||
+                                 this.parentNode.classList.contains('open') ||
+                                 state.utils.isAccordionOpen(this.parentNode);
+                    context.store.set(id, isOpen);
                     load();
                 });
             });
@@ -56,7 +73,18 @@ state.extensions['control-net'] = (function () {
 
     function bindTabEvents() {
         contexts.forEach(context => {
-            const tabs = context.container.querySelectorAll(':scope > div > div > .tabs > div > button');
+            // Try multiple selectors for compatibility
+            let tabs = context.container.querySelectorAll(':scope > div > div > .tabs > div > button');
+            if (!tabs.length) {
+                tabs = context.container.querySelectorAll('.tabs .tab-nav button');
+            }
+            if (!tabs.length) {
+                tabs = context.container.querySelectorAll('.tabs > div > button');
+            }
+            if (!tabs.length) {
+                tabs = context.container.querySelectorAll('button[role="tab"]');
+            }
+
             function onTabClick() {
                 context.store.set('tab', this.textContent);
                 bindTabEvents();
@@ -92,12 +120,84 @@ state.extensions['control-net'] = (function () {
         });
     }
 
+    // Helper to find checkbox label text
+    function getCheckboxLabel(checkbox) {
+        // Try nextElementSibling (common pattern)
+        if (checkbox.nextElementSibling && checkbox.nextElementSibling.textContent) {
+            return checkbox.nextElementSibling.textContent;
+        }
+
+        // Try parent label
+        let parentLabel = checkbox.closest('label');
+        if (parentLabel) {
+            // Get text excluding the checkbox itself
+            let clone = parentLabel.cloneNode(true);
+            let input = clone.querySelector('input');
+            if (input) input.remove();
+            if (clone.textContent && clone.textContent.trim()) {
+                return clone.textContent.trim();
+            }
+        }
+
+        // Try aria-label or title
+        if (checkbox.getAttribute('aria-label')) return checkbox.getAttribute('aria-label');
+        if (checkbox.title) return checkbox.title;
+
+        return null;
+    }
+
+    // Helper to find select/dropdown label text
+    function getSelectLabel(select) {
+        // Try label inside the select container
+        let label = select.querySelector('label');
+        if (label) {
+            if (label.firstChild && label.firstChild.textContent) {
+                return label.firstChild.textContent;
+            }
+            if (label.textContent) return label.textContent;
+        }
+
+        // Try span with label class
+        let span = select.querySelector('span[data-testid="block-label"], span[class*="label"]');
+        if (span && span.textContent) return span.textContent;
+
+        // Try previous sibling
+        if (select.previousElementSibling) {
+            let prevLabel = select.previousElementSibling.querySelector('label, span');
+            if (prevLabel && prevLabel.textContent) return prevLabel.textContent;
+        }
+
+        return null;
+    }
+
+    // Helper to find textarea label text
+    function getTextareaLabel(textarea) {
+        // Try previousElementSibling
+        if (textarea.previousElementSibling && textarea.previousElementSibling.textContent) {
+            return textarea.previousElementSibling.textContent;
+        }
+
+        // Try parent container for label
+        let parent = textarea.closest('.gradio-textbox, [class*="textbox"]');
+        if (parent) {
+            let label = parent.querySelector('label, span[data-testid="block-label"]');
+            if (label && label.textContent) return label.textContent;
+        }
+
+        // Try aria-label or placeholder
+        if (textarea.getAttribute('aria-label')) return textarea.getAttribute('aria-label');
+        if (textarea.placeholder) return textarea.placeholder;
+
+        return null;
+    }
+
     function handleCheckboxes() {
         handleContext((container, store) => {
             let checkboxes = container.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(function (checkbox) {
-                let label = checkbox.nextElementSibling;
-                let id = state.utils.txtToId(label.textContent);
+            checkboxes.forEach(function (checkbox, idx) {
+                let labelText = getCheckboxLabel(checkbox);
+                // Use index-based fallback if no label found
+                let id = labelText ? state.utils.txtToId(labelText) : `checkbox-${idx}`;
                 let value = store.get(id);
                 if (value) {
                     state.utils.setValue(checkbox, value, 'change');
@@ -111,8 +211,12 @@ state.extensions['control-net'] = (function () {
 
     function handleSelects() {
         handleContext((container, store) => {
-            container.querySelectorAll('.gradio-dropdown').forEach(select => {
-                let id = state.utils.txtToId(select.querySelector('label').firstChild.textContent);
+            // Use compatibility helper to find dropdowns
+            let dropdowns = state.utils.findDropdowns(container);
+            dropdowns.forEach(function (select, idx) {
+                let labelText = getSelectLabel(select);
+                // Use index-based fallback if no label found
+                let id = labelText ? state.utils.txtToId(labelText) : `select-${idx}`;
                 let value = store.get(id);
                 state.utils.handleSelect(select, id, store);
                 if (id === 'preprocessor' && value && value.toLowerCase() !== 'none') {
@@ -122,12 +226,64 @@ state.extensions['control-net'] = (function () {
         });
     }
 
+    // Helper to find slider label text with multiple fallback methods
+    function getSliderLabel(slider) {
+        // Try previousElementSibling first (old structure)
+        if (slider.previousElementSibling) {
+            let label = slider.previousElementSibling.querySelector('label span');
+            if (label && label.textContent) return label.textContent;
+
+            // Try just the label
+            label = slider.previousElementSibling.querySelector('label');
+            if (label && label.textContent) return label.textContent;
+
+            // Try span directly
+            label = slider.previousElementSibling.querySelector('span');
+            if (label && label.textContent) return label.textContent;
+        }
+
+        // Try parent container for label (Forge/Gradio 4.x structure)
+        let parent = slider.closest('.gradio-slider, .slider, [class*="slider"]');
+        if (parent) {
+            let label = parent.querySelector('label span, label, span[data-testid="block-label"]');
+            if (label && label.textContent) return label.textContent;
+        }
+
+        // Try looking for label in parent's previous sibling
+        if (slider.parentElement && slider.parentElement.previousElementSibling) {
+            let label = slider.parentElement.previousElementSibling.querySelector('span, label');
+            if (label && label.textContent) return label.textContent;
+        }
+
+        return null;
+    }
+
+    // Helper to find fieldset/radio label text
+    function getFieldsetLabel(fieldset) {
+        // Try firstChild.nextElementSibling (old structure)
+        if (fieldset.firstChild && fieldset.firstChild.nextElementSibling) {
+            let label = fieldset.firstChild.nextElementSibling;
+            if (label && label.textContent) return label.textContent;
+        }
+
+        // Try legend element
+        let legend = fieldset.querySelector('legend');
+        if (legend && legend.textContent) return legend.textContent;
+
+        // Try label or span
+        let label = fieldset.querySelector('label, span[class*="label"]');
+        if (label && label.textContent) return label.textContent;
+
+        return null;
+    }
+
     function handleSliders() {
         handleContext((container, store) => {
             let sliders = container.querySelectorAll('input[type="range"]');
-            sliders.forEach(function (slider) {
-                let label = slider.previousElementSibling.querySelector('label span');
-                let id = state.utils.txtToId(label.textContent);
+            sliders.forEach(function (slider, idx) {
+                let labelText = getSliderLabel(slider);
+                // Use index-based fallback if no label found
+                let id = labelText ? state.utils.txtToId(labelText) : `slider-${idx}`;
                 let value = store.get(id);
                 if (value) {
                     state.utils.setValue(slider, value, 'change');
@@ -142,10 +298,11 @@ state.extensions['control-net'] = (function () {
     function handleRadioButtons() {
         handleContext((container, store) => {
             let fieldsets = container.querySelectorAll('fieldset');
-            fieldsets.forEach(function (fieldset) {
-                let label = fieldset.firstChild.nextElementSibling;
+            fieldsets.forEach(function (fieldset, idx) {
                 let radios = fieldset.querySelectorAll('input[type="radio"]');
-                let id = state.utils.txtToId(label.textContent);
+                let labelText = getFieldsetLabel(fieldset);
+                // Use index-based fallback if no label found
+                let id = labelText ? state.utils.txtToId(labelText) : `radio-${idx}`;
                 let value = store.get(id);
                 if (value) {
                     radios.forEach(function (radio) {
@@ -164,9 +321,10 @@ state.extensions['control-net'] = (function () {
     function handleTextareas() {
         handleContext((container, store) => {
             let textareas = container.querySelectorAll('textarea');
-            textareas.forEach(function (textarea) {
-                let label = textarea.previousElementSibling;
-                let id = state.utils.txtToId(label.textContent);
+            textareas.forEach(function (textarea, idx) {
+                let labelText = getTextareaLabel(textarea);
+                // Use index-based fallback if no label found
+                let id = labelText ? state.utils.txtToId(labelText) : `textarea-${idx}`;
                 let value = store.get(id);
                 if (value) {
                     state.utils.setValue(textarea, value, 'change');
@@ -191,14 +349,32 @@ state.extensions['control-net'] = (function () {
 
     function init() {
 
+        // Try multiple selectors for ControlNet container (Forge vs A1111 compatibility)
         let elements = gradioApp().querySelectorAll('#controlnet');
+        if (!elements.length) {
+            elements = gradioApp().querySelectorAll('[id*="controlnet"]');
+        }
+        if (!elements.length) {
+            elements = gradioApp().querySelectorAll('#txt2img_controlnet, #img2img_controlnet');
+        }
+        // Forge built-in ControlNet uses different IDs
+        if (!elements.length) {
+            elements = gradioApp().querySelectorAll('[id*="forge_controlnet"], [id*="sd_forge_controlnet"]');
+        }
 
-        if (! elements.length) {
+        if (!elements.length) {
+            state.logging.log('ControlNet extension not found');
             return;
         }
 
-        contexts[0] = new ControlNetTabContext('txt2img', elements[0]);
-        contexts[1] = new ControlNetTabContext('img2img', elements[1]);
+        // Handle both single container and separate txt2img/img2img containers
+        if (elements.length >= 2) {
+            contexts[0] = new ControlNetTabContext('txt2img', elements[0]);
+            contexts[1] = new ControlNetTabContext('img2img', elements[1]);
+        } else if (elements.length === 1) {
+            // Single container mode
+            contexts[0] = new ControlNetTabContext('main', elements[0]);
+        }
 
         handleToggle();
         load();

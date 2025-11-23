@@ -46,9 +46,106 @@ state.utils = {
                     element.checked = false;
                 }
                 break;
+            case 'number':
+            case 'range':
+                // For sliders and number inputs, use Forge pattern
+                element.value = value;
+                if (typeof updateInput === 'function') {
+                    updateInput(element);
+                }
+                break;
+            case 'textarea':
+                // Textareas (prompts) - use Forge pattern
+                element.value = value;
+                if (typeof updateInput === 'function') {
+                    updateInput(element);
+                }
+                break;
             default:
                 element.value = value;
-                this.triggerEvent(element, event);
+                // For text inputs and other types, use Forge pattern if available
+                if (typeof updateInput === 'function' && (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT')) {
+                    updateInput(element);
+                } else {
+                    this.triggerEvent(element, event);
+                }
+        }
+    },
+    // Update input using Gradio's expected event format (works with Forge and new Gradio)
+    updateGradioInput: function updateGradioInput(target) {
+        if (!target) return;
+
+        // Use the global updateInput if available (Forge/A1111)
+        if (typeof updateInput === 'function') {
+            updateInput(target);
+        }
+
+        // Also dispatch events manually to ensure Svelte/Gradio components update
+        // Input event with bubbles
+        let inputEvent = new Event("input", { bubbles: true, cancelable: true });
+        Object.defineProperty(inputEvent, "target", { value: target });
+        target.dispatchEvent(inputEvent);
+
+        // Change event
+        let changeEvent = new Event("change", { bubbles: true, cancelable: true });
+        target.dispatchEvent(changeEvent);
+
+        // For Svelte components, also try InputEvent
+        try {
+            let inputEvent2 = new InputEvent("input", {
+                bubbles: true,
+                cancelable: true,
+                inputType: "insertText",
+                data: target.value
+            });
+            target.dispatchEvent(inputEvent2);
+        } catch (e) {
+            // InputEvent might not be supported in all browsers
+        }
+    },
+
+    // Set value using native setter to bypass framework reactivity issues
+    setNativeValue: function setNativeValue(element, value) {
+        // Get the native value setter
+        const valueSetter = Object.getOwnPropertyDescriptor(element.__proto__, 'value')?.set ||
+                           Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set ||
+                           Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+
+        if (valueSetter) {
+            valueSetter.call(element, value);
+        } else {
+            element.value = value;
+        }
+    },
+
+    // Update a Gradio slider component - matches exact Forge pattern
+    updateGradioSlider: function updateGradioSlider(container, value) {
+        if (!container) return;
+
+        let numberInput = container.querySelector('input[type=number]');
+        let rangeInput = container.querySelector('input[type=range]');
+
+        // Use exact Forge pattern: set .value then call updateInput()
+        if (numberInput) {
+            numberInput.value = value;
+            if (typeof updateInput === 'function') {
+                updateInput(numberInput);
+            }
+        }
+
+        // Also update range for visual sync
+        if (rangeInput) {
+            rangeInput.value = value;
+            if (typeof updateInput === 'function') {
+                updateInput(rangeInput);
+            }
+
+            // Update visual slider fill
+            let min = parseFloat(rangeInput.min) || 0;
+            let max = parseFloat(rangeInput.max) || 100;
+            let val = parseFloat(value) || 0;
+            let percentage = ((val - min) / (max - min)) * 100;
+            rangeInput.style.backgroundSize = percentage + '% 100%';
         }
     },
     onContentChange: function onContentChange(targetNode, func) {
@@ -91,17 +188,22 @@ state.utils = {
 
             setTimeout(() => {
                 state.utils.onContentChange(select, function (el) {
-                    let selected = el.querySelector('span.single-select');
-                    if (selected) {
-                        store.set(id, selected.textContent);
-                    } else {
-                        // new gradio version...
-                        let input = select.querySelector('input');
-                        if (input) {
-                            store.set(id, input.value);
-                        }
+                    // Use compatibility helper to get dropdown value
+                    var value = state.utils.getDropdownValue(el);
+                    if (value) {
+                        store.set(id, value);
                     }
                 });
+
+                // Also listen to input events directly for Gradio 4.x
+                let input = select.querySelector('input');
+                if (input) {
+                    input.addEventListener('change', function() {
+                        if (this.value) {
+                            store.set(id, this.value);
+                        }
+                    });
+                }
             }, 150);
         } catch (error) {
             console.error('[state]: Error:', error);
@@ -144,7 +246,8 @@ state.utils = {
                 }
             }
             state.utils.onContentChange(select, function (el) {
-                const selected = Array.from(el.querySelectorAll('.token > span')).map(item => item.textContent);
+                // Use compatibility helper to get multi-select values
+                const selected = state.utils.getMultiSelectValues(el);
                 store.set(id, selected);
             });
         } catch (error) {
@@ -225,7 +328,167 @@ state.utils.html = {
         const btn = document.createElement('button');
         btn.innerHTML = text;
         btn.onclick = onclick || function () {};
-        btn.className = 'gr-button gr-button-lg gr-button-primary';
+        // Support both old Gradio 3.x and new Gradio 4.x button classes
+        btn.className = state.utils.getButtonClass();
         return btn;
+    },
+    // Get the appropriate button class based on Gradio version
+    getButtonClass: function() {
+        return state.utils.getButtonClass();
     }
+};
+
+// Gradio version detection and compatibility helpers
+state.utils.gradio = {
+    _version: null,
+    _detected: false,
+
+    // Detect Gradio version based on available DOM elements/classes
+    detectVersion: function() {
+        if (this._detected) return this._version;
+
+        var root = gradioApp();
+
+        // Check for Gradio 4.x indicators
+        if (root.querySelector('.gradio-container-4-')) {
+            this._version = 4;
+        } else if (root.querySelector('[class*="gradio-container-4"]')) {
+            this._version = 4;
+        } else if (root.querySelector('.svelte-')) {
+            // Gradio 4.x uses svelte classes
+            this._version = 4;
+        } else {
+            // Default to 3.x for older versions
+            this._version = 3;
+        }
+
+        this._detected = true;
+        state.logging.log('Detected Gradio version: ' + this._version + '.x');
+        return this._version;
+    },
+
+    isVersion4: function() {
+        return this.detectVersion() >= 4;
+    }
+};
+
+// Get button class with fallback support
+state.utils.getButtonClass = function() {
+    var root = gradioApp();
+    // Try to find an existing button and copy its class
+    var existingBtn = root.querySelector('#quicksettings button');
+    if (existingBtn && existingBtn.className) {
+        return existingBtn.className;
+    }
+    // Fallback class names - try both old and new
+    if (state.utils.gradio.isVersion4()) {
+        return 'lg primary gradio-button svelte-cmf5ev';
+    }
+    return 'gr-button gr-button-lg gr-button-primary';
+};
+
+// Find dropdown elements with fallback selectors
+state.utils.findDropdowns = function(container) {
+    container = container || gradioApp();
+    // Try multiple selectors for compatibility
+    var dropdowns = container.querySelectorAll('.gradio-dropdown');
+    if (!dropdowns.length) {
+        dropdowns = container.querySelectorAll('[data-testid="dropdown"]');
+    }
+    if (!dropdowns.length) {
+        dropdowns = container.querySelectorAll('.dropdown');
+    }
+    return dropdowns;
+};
+
+// Find accordion elements with fallback selectors
+state.utils.findAccordions = function(container) {
+    container = container || gradioApp();
+    var accordions = container.querySelectorAll('.gradio-accordion');
+    if (!accordions.length) {
+        accordions = container.querySelectorAll('.accordion');
+    }
+    if (!accordions.length) {
+        accordions = container.querySelectorAll('[data-testid="accordion"]');
+    }
+    return accordions;
+};
+
+// Get selected value from dropdown with version compatibility
+state.utils.getDropdownValue = function(select) {
+    if (!select) return null;
+
+    // Try new Gradio 4.x input method first
+    var input = select.querySelector('input');
+    if (input && input.value) {
+        return input.value;
+    }
+
+    // Try old Gradio 3.x span method
+    var selected = select.querySelector('span.single-select');
+    if (selected) {
+        return selected.textContent;
+    }
+
+    // Try other common patterns
+    var selectedOption = select.querySelector('.selected');
+    if (selectedOption) {
+        return selectedOption.textContent;
+    }
+
+    return null;
+};
+
+// Get multi-select values with version compatibility
+state.utils.getMultiSelectValues = function(select) {
+    if (!select) return [];
+
+    // Try token pattern (common in both versions)
+    var tokens = select.querySelectorAll('.token > span, .token span:first-child');
+    if (tokens.length) {
+        return Array.from(tokens).map(item => item.textContent);
+    }
+
+    // Try secondary-wrap pattern (Gradio 4.x)
+    var secondary = select.querySelectorAll('.secondary-wrap .token');
+    if (secondary.length) {
+        return Array.from(secondary).map(item => item.textContent.trim());
+    }
+
+    // Try pill/tag pattern
+    var pills = select.querySelectorAll('.pill, .tag, [data-value]');
+    if (pills.length) {
+        return Array.from(pills).map(item => item.textContent || item.dataset.value);
+    }
+
+    return [];
+};
+
+// Check if accordion is open with version compatibility
+state.utils.isAccordionOpen = function(accordion) {
+    if (!accordion) return false;
+
+    var labelWrap = accordion.querySelector('.label-wrap');
+    if (labelWrap) {
+        // Check for 'open' class (Forge/A1111 style)
+        if (labelWrap.classList.contains('open')) {
+            return true;
+        }
+    }
+
+    // Check for input-accordion-open class
+    if (accordion.classList.contains('input-accordion-open')) {
+        return true;
+    }
+
+    // Check icon rotation (older pattern)
+    var icon = accordion.querySelector('.transition, .icon');
+    if (icon) {
+        var transform = icon.style.transform || window.getComputedStyle(icon).transform;
+        if (transform && transform.indexOf('90') === -1) {
+            return true;
+        }
+    }
+
+    return false;
 };

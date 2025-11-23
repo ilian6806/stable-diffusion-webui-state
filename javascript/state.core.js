@@ -14,6 +14,7 @@ state.core = (function () {
         'hires_resize_x': 'hr_resize_x',
         'hires_resize_y': 'hr_resize_y',
         'hires_denoising_strength': 'denoising_strength',
+        'hires_cfg_scale': 'hr_cfg',
         'refiner_switch': 'switch_at',
         'upscaler_2_visibility': 'extras_upscaler_2_visibility',
         'upscaler_scale_by_resize': 'extras_upscaling_resize',
@@ -225,13 +226,47 @@ state.core = (function () {
         }
     }
 
+    // Get tab buttons with multiple fallback selectors for compatibility
+    function getTabButtons() {
+        var root = gradioApp();
+        // Try multiple selectors for compatibility with different Gradio versions
+        var tabs = root.querySelectorAll('#tabs > div:first-child button');
+        if (!tabs.length) {
+            tabs = root.querySelectorAll('#tabs .tab-nav button');
+        }
+        if (!tabs.length) {
+            tabs = root.querySelectorAll('#tabs > .tabs > .tab-nav button');
+        }
+        if (!tabs.length) {
+            // Gradio 4.x may have different structure
+            tabs = root.querySelectorAll('#tabs button[role="tab"]');
+        }
+        if (!tabs.length) {
+            tabs = root.querySelectorAll('#tabs > div > button');
+        }
+        return tabs;
+    }
+
+    // Get selected tab button with fallback
+    function getSelectedTabButton() {
+        var root = gradioApp();
+        var selected = root.querySelector('#tabs .tab-nav button.selected');
+        if (!selected) {
+            selected = root.querySelector('#tabs button.selected');
+        }
+        if (!selected) {
+            selected = root.querySelector('#tabs button[aria-selected="true"]');
+        }
+        return selected;
+    }
+
     function restoreTabs(config) {
 
         if (! config.hasSetting('tabs')) {
             return;
         }
 
-        const tabs = gradioApp().querySelectorAll('#tabs > div:first-child button');
+        const tabs = getTabButtons();
         const value = store.get('tab');
 
         if (value) {
@@ -244,20 +279,23 @@ state.core = (function () {
         }
         // Use this when onUiTabChange is fixed
         // onUiTabChange(function () {
-        //     store.set('tab', gradioApp().querySelector('#tabs .tab-nav button.selected').textContent);
+        //     store.set('tab', getSelectedTabButton()?.textContent);
         // });
         bindTabClickEvents();
     }
 
     function bindTabClickEvents() {
-        Array.from(gradioApp().querySelectorAll('#tabs .tab-nav button')).forEach(tab => {
+        Array.from(getTabButtons()).forEach(tab => {
             tab.removeEventListener('click', storeTab);
             tab.addEventListener('click', storeTab);
         });
     }
 
     function storeTab() {
-        store.set('tab', gradioApp().querySelector('#tabs .tab-nav button.selected').textContent);
+        var selected = getSelectedTabButton();
+        if (selected) {
+            store.set('tab', selected.textContent);
+        }
         bindTabClickEvents(); // dirty hack here...
     }
 
@@ -288,6 +326,12 @@ state.core = (function () {
             return;
         }
 
+        // Convert to array for easier handling
+        elements = Array.from(elements);
+
+        // For sliders with both number input and range, prefer number input for storage
+        let primaryElement = elements.find(el => el.type === 'number') || elements[0];
+
         let forEach = function (action) {
             events.forEach(function(event) {
                 elements.forEach(function (element) {
@@ -296,6 +340,7 @@ state.core = (function () {
             });
         };
 
+        // Attach event listeners to all elements
         forEach(function (event) {
             this.addEventListener(event, function () {
                 let value = this.value;
@@ -306,17 +351,23 @@ state.core = (function () {
             });
         });
 
-        TABS.forEach(tab => {
-            const seedInput = gradioApp().querySelector(`#${tab}_seed input`);
-            ['random_seed', 'reuse_seed'].forEach(id => {
-                const btn = gradioApp().querySelector(`#${tab}_${id}`);
-                btn.addEventListener('click', () => {
-                    setTimeout(() => {
-                        state.utils.triggerEvent(seedInput, 'change');
-                    }, 100);
+        // Special handling for seed buttons
+        if (id.indexOf('seed') > -1) {
+            TABS.forEach(tab => {
+                const seedInput = gradioApp().querySelector(`#${tab}_seed input[type="number"]`);
+                if (!seedInput) return;
+                ['random_seed', 'reuse_seed'].forEach(btnId => {
+                    const btn = gradioApp().querySelector(`#${tab}_${btnId}`);
+                    if (btn) {
+                        btn.addEventListener('click', () => {
+                            setTimeout(() => {
+                                state.utils.triggerEvent(seedInput, 'change');
+                            }, 100);
+                        });
+                    }
                 });
             });
-        });
+        }
 
         let value = store.get(id);
 
@@ -324,9 +375,67 @@ state.core = (function () {
             return;
         }
 
-        forEach(function (event) {
-            state.utils.setValue(this, value, event);
-        });
+        // Delay restoration to ensure UI and updateInput are ready
+        // Use longer delay to ensure Gradio components are fully initialized
+        setTimeout(function() {
+            // Check if updateInput is available (it should be by now)
+            if (typeof updateInput !== 'function') {
+                state.logging.warn('updateInput not available yet, retrying...');
+                setTimeout(function() {
+                    restoreInputValue(id, elements, value);
+                }, 500);
+            } else {
+                restoreInputValue(id, elements, value);
+            }
+        }, 1000);
+    }
+
+    function restoreInputValue(id, elements, value) {
+        state.logging.log(`Attempting to restore ${id} with value: ${value}`);
+
+        // Check element types
+        let numberInput = elements.find(el => el.type === 'number');
+        let rangeInput = elements.find(el => el.type === 'range');
+        let textareaInput = elements.find(el => el.tagName === 'TEXTAREA');
+        let textInput = elements.find(el => el.type === 'text');
+
+        state.logging.log(`Found elements for ${id}: number=${!!numberInput}, range=${!!rangeInput}, textarea=${!!textareaInput}, text=${!!textInput}`);
+
+        // For sliders (have both number and range), use special handler
+        if (numberInput && rangeInput) {
+            // Get the container element
+            let container = numberInput.closest('.gradio-slider, [class*="slider"]') ||
+                           numberInput.parentElement.parentElement;
+            state.logging.log(`Updating slider container for ${id}`, container);
+            state.utils.updateGradioSlider(container, value);
+
+            // Verify the value was set
+            setTimeout(function() {
+                state.logging.log(`After restore - ${id} number value: ${numberInput.value}, range value: ${rangeInput.value}`);
+            }, 100);
+        } else if (numberInput) {
+            // Just number input
+            state.utils.setValue(numberInput, value, 'input');
+            state.logging.log(`Restored number ${id}: ${value}`);
+        } else if (textareaInput) {
+            // For textareas (prompts)
+            state.utils.setValue(textareaInput, value, 'input');
+            state.logging.log(`Restored textarea ${id}: ${value}`);
+        } else if (textInput) {
+            // For text inputs
+            state.utils.setValue(textInput, value, 'input');
+            state.logging.log(`Restored text ${id}: ${value}`);
+        } else if (rangeInput) {
+            // Fallback to range input
+            state.utils.setValue(rangeInput, value, 'input');
+            state.logging.log(`Restored range ${id}: ${value}`);
+        } else {
+            // For any other elements, update all
+            state.logging.log(`Restoring ${id} to all ${elements.length} elements`);
+            elements.forEach(function (element) {
+                state.utils.setValue(element, value, 'input');
+            });
+        }
     }
 
     function handleSavedSelects(id, duplicateIds) {
@@ -353,15 +462,29 @@ state.core = (function () {
 
         let selector = duplicateIds ? `[id="${id}"]` : `#${id}`;
 
-        elements = gradioApp().querySelectorAll(`.input-accordion${selector}>.label-wrap`);
+        // Try multiple selector patterns for compatibility
+        var elements = gradioApp().querySelectorAll(`.input-accordion${selector}>.label-wrap`);
+        if (!elements.length) {
+            elements = gradioApp().querySelectorAll(`.input-accordion${selector} .label-wrap`);
+        }
+        if (!elements.length) {
+            elements = gradioApp().querySelectorAll(`${selector} > .label-wrap`);
+        }
+        if (!elements.length) {
+            elements = gradioApp().querySelectorAll(`${selector}.input-accordion > .label-wrap`);
+        }
 
         elements.forEach(function (element) {
             if (store.get(id) === 'true') {
                 state.utils.clickToggleMenu(element);
             }
             element.addEventListener('click', function () {
-                let classList = Array.from(this.parentNode.classList);
-                store.set(id, classList.indexOf('input-accordion-open') > -1);
+                var parent = this.parentNode;
+                // Check for open state using multiple methods for compatibility
+                var isOpen = parent.classList.contains('input-accordion-open') ||
+                             this.classList.contains('open') ||
+                             state.utils.isAccordionOpen(parent);
+                store.set(id, isOpen);
             });
         });
     }
