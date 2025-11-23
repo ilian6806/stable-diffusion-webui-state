@@ -50,7 +50,8 @@ state.extensions['dynamic prompting'] = (function () {
     }
 
     function handleSelects() {
-        let selects = container.querySelectorAll('.gradio-dropdown')
+        // Use compatibility helper to find dropdowns
+        let selects = state.utils.findDropdowns(container);
         selects.forEach(function (select, idx) {
             state.utils.handleSelect(select, `dp-select-${idx}`, store);
         });
@@ -76,17 +77,24 @@ state.extensions['dynamic prompting'] = (function () {
     }
 
     function handleDropdowns() {
-        let dropdowns = container.querySelectorAll('.gradio-accordion .label-wrap');
-        dropdowns.forEach(function (dropdown, idx) {
+        // Use compatibility helper to find accordions
+        let accordions = state.utils.findAccordions(container);
+        accordions.forEach(function (accordion, idx) {
+            let labelWrap = accordion.querySelector('.label-wrap');
+            if (!labelWrap) return;
+
             let id = `dp-dropdown-${idx}`;
             let value = store.get(id);
 
             if (value && value === 'true') {
-                state.utils.triggerEvent(dropdown, 'click');
+                state.utils.triggerEvent(labelWrap, 'click');
             }
-            dropdown.addEventListener('click', function () {
-                let span = this.querySelector('.transition, .icon');
-                store.set(id, span.style.transform !== 'rotate(90deg)');
+            labelWrap.addEventListener('click', function () {
+                // Use multiple methods to check open state for compatibility
+                let isOpen = this.classList.contains('open') ||
+                             this.parentNode.classList.contains('open') ||
+                             state.utils.isAccordionOpen(this.parentNode);
+                store.set(id, isOpen);
             });
         });
     }
@@ -104,10 +112,22 @@ state.extensions['dynamic prompting'] = (function () {
 
     function init() {
 
+        // Try multiple selectors for Dynamic Prompting container (Forge vs A1111 compatibility)
         container = gradioApp().getElementById('sddp-dynamic-prompting');
+        if (!container) {
+            container = gradioApp().querySelector('[id*="dynamic-prompting"]');
+        }
+        if (!container) {
+            container = gradioApp().querySelector('[id*="dynamicprompts"]');
+        }
+        if (!container) {
+            container = gradioApp().querySelector('[id*="dynamic_prompts"]');
+        }
+
         store = new state.Store('ext-dynamic-prompting');
 
-        if (! container) {
+        if (!container) {
+            state.logging.log('Dynamic Prompting extension not found');
             return;
         }
 

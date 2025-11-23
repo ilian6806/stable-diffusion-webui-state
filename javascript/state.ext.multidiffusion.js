@@ -50,7 +50,8 @@ state.extensions['multidiffusion'] = (function () {
     }
 
     function handleSelects(container, name) {
-        let selects = container.querySelectorAll('.gradio-dropdown')
+        // Use compatibility helper to find dropdowns
+        let selects = state.utils.findDropdowns(container);
         selects.forEach(function (select, idx) {
             state.utils.handleSelect(select, `md-${name}-select-${idx}`, store);
         });
@@ -76,17 +77,24 @@ state.extensions['multidiffusion'] = (function () {
     }
 
     function handleDropdowns(container, name) {
-        let dropdowns = container.querySelectorAll('.gradio-accordion .label-wrap');
-        dropdowns.forEach(function (dropdown, idx) {
+        // Use compatibility helper to find accordions
+        let accordions = state.utils.findAccordions(container);
+        accordions.forEach(function (accordion, idx) {
+            let labelWrap = accordion.querySelector('.label-wrap');
+            if (!labelWrap) return;
+
             let id = `md-${name}-dropdown-${idx}`;
             let value = store.get(id);
 
             if (value && value === 'true') {
-                state.utils.triggerEvent(dropdown, 'click');
+                state.utils.triggerEvent(labelWrap, 'click');
             }
-            dropdown.addEventListener('click', function () {
-                let span = this.querySelector('.transition, .icon');
-                store.set(id, span.style.transform !== 'rotate(90deg)');
+            labelWrap.addEventListener('click', function () {
+                // Use multiple methods to check open state for compatibility
+                let isOpen = this.classList.contains('open') ||
+                             this.parentNode.classList.contains('open') ||
+                             state.utils.isAccordionOpen(this.parentNode);
+                store.set(id, isOpen);
             });
         });
     }
@@ -106,20 +114,47 @@ state.extensions['multidiffusion'] = (function () {
 
     function init() {
 
+        // Try to find Tiled Diffusion/VAE containers by text content
         let spanTags = gradioApp().getElementsByTagName("span");
         for (var i = 0; i < spanTags.length; i++) {
-            if (spanTags[i].textContent == 'Tiled Diffusion') {
-                containers.push({container: spanTags[i].parentElement.parentElement,name: 'diffusion'});
+            let text = spanTags[i].textContent.trim();
+            if (text === 'Tiled Diffusion' || text === 'Tiled Diffusion (Multidiffusion)') {
+                let parent = spanTags[i].parentElement;
+                // Navigate up to find the accordion container
+                while (parent && !parent.classList.contains('gradio-accordion') && !parent.classList.contains('accordion') && !parent.id) {
+                    parent = parent.parentElement;
+                }
+                if (parent) {
+                    containers.push({container: parent, name: 'diffusion'});
+                }
             }
-            if (spanTags[i].textContent == 'Tiled VAE') {
-                containers.push({container: spanTags[i].parentElement.parentElement,name: 'vae'});
-                break;
+            if (text === 'Tiled VAE') {
+                let parent = spanTags[i].parentElement;
+                while (parent && !parent.classList.contains('gradio-accordion') && !parent.classList.contains('accordion') && !parent.id) {
+                    parent = parent.parentElement;
+                }
+                if (parent) {
+                    containers.push({container: parent, name: 'vae'});
+                }
             }
-        };
+        }
+
+        // Also try by ID for Forge compatibility
+        if (!containers.length) {
+            let tiledDiff = gradioApp().querySelector('[id*="tiled_diffusion"], [id*="multidiffusion"]');
+            if (tiledDiff) {
+                containers.push({container: tiledDiff, name: 'diffusion'});
+            }
+            let tiledVae = gradioApp().querySelector('[id*="tiled_vae"]');
+            if (tiledVae) {
+                containers.push({container: tiledVae, name: 'vae'});
+            }
+        }
 
         store = new state.Store('ext-multidiffusion');
 
-        if (! containers.length) {
+        if (!containers.length) {
+            state.logging.log('Multidiffusion/Tiled VAE extension not found');
             return;
         }
 
