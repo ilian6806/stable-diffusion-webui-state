@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Stable Diffusion WebUI extension that preserves UI parameters (inputs, sliders, checkboxes, etc.) after page reload. It uses localStorage for persistence and supports multiple SD extensions (ControlNet, ADetailer, Dynamic Prompting, Multidiffusion/Tiled VAE).
 
+**Compatible with:**
+- AUTOMATIC1111 Stable Diffusion WebUI
+- Stable Diffusion WebUI Forge
+- Gradio 3.x and 4.x
+
 ## Development
 
 **No build system** - This is a pure extension with vanilla JavaScript and Python. Files are loaded directly by the parent Stable Diffusion WebUI.
@@ -32,6 +37,15 @@ state.ext.*.js        → Extension-specific handlers (ControlNet, ADetailer, et
 - IIFE modules prevent global namespace pollution
 - All code lives under `window.state` namespace (`state.core`, `state.store`, `state.utils`, `state.extensions`)
 - Extension plugins register via `state.extensions[name] = { init: function() {} }`
+
+**Gradio Compatibility Utilities** (`state.utils`):
+- `state.utils.gradio.detectVersion()` - Detects Gradio 3.x vs 4.x
+- `state.utils.getButtonClass()` - Returns appropriate button CSS classes
+- `state.utils.findDropdowns(container)` - Finds dropdowns with fallback selectors
+- `state.utils.findAccordions(container)` - Finds accordions with fallback selectors
+- `state.utils.getDropdownValue(select)` - Gets dropdown value (works with both Gradio versions)
+- `state.utils.getMultiSelectValues(select)` - Gets multi-select values
+- `state.utils.isAccordionOpen(accordion)` - Checks accordion state with multiple methods
 
 ### Backend (Python)
 

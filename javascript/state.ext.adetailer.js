@@ -9,7 +9,14 @@ state.extensions['adetailer'] = (function () {
     let cnTabs = [];
 
     function bindTabEvents() {
-        const tabs = container.querySelectorAll('.tabs > div > button');
+        // Try multiple selectors for compatibility
+        let tabs = container.querySelectorAll('.tabs > div > button');
+        if (!tabs.length) {
+            tabs = container.querySelectorAll('.tabs .tab-nav button');
+        }
+        if (!tabs.length) {
+            tabs = container.querySelectorAll('button[role="tab"]');
+        }
         tabs.forEach(tab => { // dirty hack here
             tab.removeEventListener('click', onTabClick);
             tab.addEventListener('click', onTabClick);
@@ -36,6 +43,8 @@ state.extensions['adetailer'] = (function () {
     }
 
     function handleCheckbox(checkbox, id) {
+        if (!checkbox) return;
+
         let value = store.get(id);
         if (value) {
             state.utils.setValue(checkbox, value, 'change');
@@ -81,7 +90,8 @@ state.extensions['adetailer'] = (function () {
     }
 
     function handleSelects(container, container_idx) {
-        let selects = container.querySelectorAll('.gradio-dropdown')
+        // Use compatibility helper to find dropdowns
+        let selects = state.utils.findDropdowns(container);
         selects.forEach(function (select, idx) {
             state.utils.handleSelect(select, `ad-tab-${container_idx}-select-${idx}`, store);
         });
@@ -107,28 +117,49 @@ state.extensions['adetailer'] = (function () {
     }
 
     function handleDropdown(dropdown, id) {
+        if (!dropdown) return;
+
         let value = store.get(id);
 
         if (value && value === 'true') {
             state.utils.triggerEvent(dropdown, 'click');
         }
         dropdown.addEventListener('click', function () {
-            let span = this.querySelector('.transition, .icon');
-            store.set(id, span.style.transform !== 'rotate(90deg)');
+            // Use multiple methods to check open state for compatibility
+            let isOpen = this.classList.contains('open') ||
+                         this.parentNode.classList.contains('open') ||
+                         state.utils.isAccordionOpen(this.parentNode);
+            store.set(id, isOpen);
         });
     }
 
     function handleDropdowns(container, container_idx) {
-        let dropdowns = container.querySelectorAll('.gradio-accordion .label-wrap');
-        dropdowns.forEach(function (dropdown, idx) {
-            handleDropdown(dropdown, `ad-tab-${container_idx}-dropdown-${idx}`);
+        // Use compatibility helper to find accordions
+        let accordions = state.utils.findAccordions(container);
+        accordions.forEach(function (accordion, idx) {
+            let labelWrap = accordion.querySelector('.label-wrap');
+            if (labelWrap) {
+                handleDropdown(labelWrap, `ad-tab-${container_idx}-dropdown-${idx}`);
+            }
         });
     }
 
     function load() {
         setTimeout(function () {
-            handleDropdown(container.querySelector('#script_txt2img_adetailer_ad_main_accordion > .label-wrap'), 'ad-dropdown-main');
-            handleCheckbox(container.querySelector('#script_txt2img_adetailer_ad_enable > label > input'), 'ad-checkbox-enable');
+            // Try multiple selectors for the main accordion
+            let mainAccordion = container.querySelector('#script_txt2img_adetailer_ad_main_accordion > .label-wrap');
+            if (!mainAccordion) {
+                mainAccordion = container.querySelector('.label-wrap');
+            }
+            handleDropdown(mainAccordion, 'ad-dropdown-main');
+
+            // Try multiple selectors for the enable checkbox
+            let enableCheckbox = container.querySelector('#script_txt2img_adetailer_ad_enable > label > input');
+            if (!enableCheckbox) {
+                enableCheckbox = container.querySelector('input[type="checkbox"]');
+            }
+            handleCheckbox(enableCheckbox, 'ad-checkbox-enable');
+
             cnTabs.forEach(({ container, container_idx }) => {
                 handleTabs(container, container_idx);
                 handleTextboxes(container, container_idx);
@@ -143,14 +174,30 @@ state.extensions['adetailer'] = (function () {
 
     function init() {
 
+        // Try multiple selectors for ADetailer container (Forge vs A1111 compatibility)
         container = gradioApp().getElementById('script_txt2img_adetailer_ad_main_accordion');
-        store = new state.Store('ext-adetailerr');
+        if (!container) {
+            container = gradioApp().querySelector('[id*="adetailer"]');
+        }
+        if (!container) {
+            container = gradioApp().querySelector('[id*="ADetailer"]');
+        }
 
-        if (! container) {
+        store = new state.Store('ext-adetailer');
+
+        if (!container) {
+            state.logging.log('ADetailer extension not found');
             return;
         }
 
+        // Try multiple selectors for tabs
         let tabs = container.querySelectorAll('.tabitem');
+        if (!tabs.length) {
+            tabs = container.querySelectorAll('[id*="tabitem"]');
+        }
+        if (!tabs.length) {
+            tabs = container.querySelectorAll('.tabs > div[role="tabpanel"]');
+        }
 
         if (tabs.length) {
             cnTabs = [];
@@ -162,7 +209,8 @@ state.extensions['adetailer'] = (function () {
             });
         } else {
             cnTabs = [{
-                container: container
+                container: container,
+                container_idx: 0
             }];
         }
 
