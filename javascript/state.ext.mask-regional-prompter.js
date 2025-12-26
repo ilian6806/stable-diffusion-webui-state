@@ -32,7 +32,10 @@ state.extensions['mask-regional-prompter'] = (function () {
         'prompts_dump': { selector: '#mrp_prompts_dump_{tab} textarea', type: 'text', isData: true },
 
         // Composite mask image (fallback if layer_data unavailable)
-        'mask_data': { selector: '#mrp_mask_data_{tab} textarea', type: 'text', isData: true }
+        'mask_data': { selector: '#mrp_mask_data_{tab} textarea', type: 'text', isData: true },
+
+        // Base image data (image user uploaded/dropped onto editor)
+        'base_image_data': { selector: '#mrp_base_image_data_{tab} textarea', type: 'text', isData: true }
     };
 
     let stores = {};
@@ -116,8 +119,9 @@ state.extensions['mask-regional-prompter'] = (function () {
         const maskData = store.get('mask_data');
         const layerData = store.get('layer_data');
         const promptsDump = store.get('prompts_dump');
+        const baseImageData = store.get('base_image_data');
 
-        if (!maskData && !layerData) {
+        if (!maskData && !layerData && !baseImageData) {
             state.logging.log(`[MRP] No mask data to restore for ${tab}`);
             return;
         }
@@ -138,24 +142,39 @@ state.extensions['mask-regional-prompter'] = (function () {
                 setTimeout(() => {
                     state.logging.log(`[MRP] Restoring mask data for ${tab}`);
 
-                    // Load the mask and layer data
-                    window.MaskEditorAPI.loadMaskData(tab, maskData, layerData);
-
-                    // Restore layer prompts
-                    if (promptsDump) {
-                        try {
-                            const prompts = JSON.parse(promptsDump);
-                            const editorInstance = window.MaskEditors[tab];
-                            if (editorInstance) {
-                                editorInstance.layerPrompts = prompts;
-                                editorInstance.syncPromptFields();
-                            }
-                        } catch (e) {
-                            state.logging.warn('[MRP] Failed to parse prompts dump: ' + e);
-                        }
+                    const editorInstance = window.MaskEditors[tab];
+                    if (!editorInstance) {
+                        state.logging.warn(`[MRP] Editor instance not found for ${tab}`);
+                        return;
                     }
 
-                    state.logging.log(`[MRP] Mask editor restored for ${tab}`);
+                    // Load base image first (if available)
+                    if (baseImageData) {
+                        state.logging.log(`[MRP] Restoring base image for ${tab}`);
+                        editorInstance.setBaseImage(baseImageData);
+                    }
+
+                    // Load the mask and layer data (after a small delay to allow base image to load)
+                    setTimeout(() => {
+                        if (maskData || layerData) {
+                            window.MaskEditorAPI.loadMaskData(tab, maskData, layerData);
+                        }
+
+                        // Restore layer prompts
+                        if (promptsDump) {
+                            try {
+                                const prompts = JSON.parse(promptsDump);
+                                if (editorInstance) {
+                                    editorInstance.layerPrompts = prompts;
+                                    editorInstance.syncPromptFields();
+                                }
+                            } catch (e) {
+                                state.logging.warn('[MRP] Failed to parse prompts dump: ' + e);
+                            }
+                        }
+
+                        state.logging.log(`[MRP] Mask editor restored for ${tab}`);
+                    }, baseImageData ? 500 : 0);
                 }, 1000);
             }
         }, 500);
