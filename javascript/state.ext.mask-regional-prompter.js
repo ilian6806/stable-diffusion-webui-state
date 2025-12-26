@@ -80,8 +80,11 @@ state.extensions['mask-regional-prompter'] = (function () {
             setInterval(() => {
                 const currentValue = el.value;
                 const storedValue = store.get(key);
-                if (currentValue && currentValue !== storedValue && currentValue.length > 10) {
-                    store.set(key, currentValue);
+                // Save if: value has changed AND (it's non-trivial OR we're clearing a non-empty stored value)
+                if (currentValue !== storedValue) {
+                    if (currentValue.length > 10 || (currentValue === '' && storedValue && storedValue.length > 0)) {
+                        store.set(key, currentValue);
+                    }
                 }
             }, 2000);
         }
