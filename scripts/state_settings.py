@@ -101,7 +101,8 @@ def on_ui_settings():
             "control-net",
             "adetailer",
             "multidiffusion",
-            "dynamic prompting"
+            "dynamic prompting",
+            "mask-regional-prompter"
         ]
     }, section=section))
 
